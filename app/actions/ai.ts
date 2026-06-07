@@ -9,17 +9,17 @@ export async function generateInsightsAction(trades: Trade[]) {
     return {
       patterns: [],
       correlations: [],
-      recommendations: []
+      recommendations: [],
     };
   }
 
   // We send a summary of the trades to the LLM to save tokens and speed up generation
-  const summary = trades.slice(0, 50).map(t => ({
+  const summary = trades.slice(0, 50).map((t) => ({
     symbol: t.symbol,
     side: t.side,
     netPnl: t.netPnl,
     duration: t.duration,
-    rr: t.rr
+    rr: t.rr,
   }));
 
   const prompt = `
@@ -44,19 +44,22 @@ export async function generateInsightsAction(trades: Trade[]) {
   `;
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json"
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama3-70b-8192",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+        }),
       },
-      body: JSON.stringify({
-        model: "llama3-70b-8192",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.2
-      })
-    });
+    );
 
     if (!response.ok) {
       console.error("Groq API Error:", await response.text());
@@ -66,13 +69,12 @@ export async function generateInsightsAction(trades: Trade[]) {
     const data = await response.json();
     const content = data.choices[0].message.content;
     return JSON.parse(content);
-    
   } catch (error) {
     console.error("Failed to call Groq", error);
     return {
       patterns: [],
       correlations: [],
-      recommendations: []
+      recommendations: [],
     };
   }
 }
