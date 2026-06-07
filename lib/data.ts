@@ -1,11 +1,24 @@
-// ─── Shared mock data & types for TradeZella clone ───────────────────────────
+// ─── Shared mock data & types for ApexTrade ───────────────────────────────
 // This is the single source of truth for all mock data across pages.
+
+export const BRAND = {
+  name: "ApexTrade",
+  scoreName: "Apex Score",
+  tagline: "Trading Journal & Performance Analytics",
+};
 
 export type TradeSide = "Long" | "Short";
 export type TradeStatus = "Open" | "Closed";
 
+export interface TradingAccount {
+  id: string;
+  name: string;
+  startingBalance: number;
+  currentBalance: number;
+}
+
 export interface Trade {
-  id: number;
+  id: string | number;
   date: string; // ISO "YYYY-MM-DD"
   time: string; // "HH:MM"
   symbol: string;
@@ -22,8 +35,14 @@ export interface Trade {
   tags: string[];
   hasNote: boolean;
   status: TradeStatus;
+  accountId?: string;
   winRate?: number;
   screenshots?: string[];
+  playbookId?: string | null;
+  stopLoss?: number;
+  takeProfit?: number;
+  initialRr?: number;
+  notes?: string;
   psychology?: {
     fomo: number; // 1-5
     discipline: number; // 1-5
@@ -200,7 +219,7 @@ export const TRADES: Trade[] = [
     netPnl: 251.1,
     rr: 2.8,
     duration: 91,
-    playbook: "VWAP Pull",
+    playbook: "VWAP Rejection",
     tags: ["momentum"],
     hasNote: true,
     status: "Closed",
@@ -295,7 +314,7 @@ export const TRADES: Trade[] = [
     netPnl: 402.0,
     rr: 2.7,
     duration: 78,
-    playbook: "VWAP Pull",
+    playbook: "VWAP Rejection",
     tags: ["index", "trend"],
     hasNote: true,
     status: "Closed",

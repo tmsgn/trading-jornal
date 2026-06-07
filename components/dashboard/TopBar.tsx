@@ -10,16 +10,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import React, { useState, useEffect } from "react";
 import { getSavedProfile } from "@/lib/data";
+import { useTrades } from "@/components/providers/TradeProvider";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Dashboard",
   "/journal": "Journal",
+  "/daily-journal": "Daily Journal",
   "/analytics": "Analytics",
   "/trades": "Trades",
   "/ai-insights": "AI Insights",
   "/playbooks": "Playbooks",
-  "/community": "Community",
-  "/academy": "Academy",
   "/settings": "Settings",
 };
 
@@ -27,6 +27,11 @@ export function TopBar() {
   const pathname = usePathname();
   const title = PAGE_TITLES[pathname] ?? "Dashboard";
   const [profile, setProfile] = useState(() => getSavedProfile());
+  const { accounts, activeAccountId, setActiveAccountId } = useTrades();
+
+  // Dropdown states
+  const [tradeFilter, setTradeFilter] = useState("All Trades");
+  const [dateRange, setDateRange] = useState("This Month");
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -40,8 +45,7 @@ export function TopBar() {
 
   return (
     <div
-      className="flex items-center justify-between px-5 h-[52px] flex-shrink-0"
-      style={{ borderBottom: "1px solid #e8ecf4", background: "#fff" }}
+      className="flex items-center justify-between px-5 h-[52px] flex-shrink-0 bg-white border-b border-gray-100"
     >
       {/* Left: page title */}
       <div className="flex items-center gap-2">
@@ -65,14 +69,14 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
               <Filter size={13} className="text-gray-400" />
-              Filters
+              {tradeFilter}
               <ChevronDown size={12} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>All Trades</DropdownMenuItem>
-            <DropdownMenuItem>Winning Trades</DropdownMenuItem>
-            <DropdownMenuItem>Losing Trades</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTradeFilter("All Trades")}>All Trades</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTradeFilter("Winning Trades")}>Winning Trades</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTradeFilter("Losing Trades")}>Losing Trades</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -80,38 +84,42 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
               <Calendar size={13} className="text-gray-400" />
-              Date range
+              {dateRange}
               <ChevronDown size={12} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Today</DropdownMenuItem>
-            <DropdownMenuItem>This Week</DropdownMenuItem>
-            <DropdownMenuItem>This Month</DropdownMenuItem>
-            <DropdownMenuItem>All Time</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDateRange("Today")}>Today</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDateRange("This Week")}>This Week</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDateRange("This Month")}>This Month</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDateRange("All Time")}>All Time</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
-              <Layers size={13} className="text-gray-400" />
-              All Accounts
-              <ChevronDown size={12} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>All Accounts</DropdownMenuItem>
-            <DropdownMenuItem>Live Account</DropdownMenuItem>
-            <DropdownMenuItem>Paper Trading</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {accounts.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
+                <Layers size={13} className="text-gray-400" />
+                {accounts.find(a => a.id === activeAccountId)?.name || "Select Account"}
+                <ChevronDown size={12} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {accounts.map(acc => (
+                <DropdownMenuItem key={acc.id} onClick={() => setActiveAccountId(acc.id)}>
+                  {acc.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Avatar */}
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ml-1 cursor-pointer hover:opacity-90 transition-opacity"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ml-1 cursor-pointer shadow-sm hover:opacity-90 transition-all border border-emerald-500/20"
           style={{
-            background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+            background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
           }}
           title={`${profile.firstName} ${profile.lastName}`}
         >

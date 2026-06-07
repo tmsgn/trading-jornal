@@ -30,13 +30,13 @@ import {
 import {
   Trade,
   DailyJournal,
-  getSavedTrades,
   getSavedDailyJournals,
   saveDailyJournals,
   getEmptyJournal,
   DEFAULT_RULES_CHECKLIST,
 } from "@/lib/data";
 import { toast } from "sonner";
+import { useTrades } from "@/components/providers/TradeProvider";
 
 // Emojis for moods
 const MOODS = [
@@ -66,7 +66,7 @@ const POPULAR_EMOTIONS = [
 
 export default function DailyJournalRedesignedPage() {
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const { trades } = useTrades();
   const [journals, setJournals] = useState<Record<string, DailyJournal>>({});
   const [currentJournal, setCurrentJournal] = useState<DailyJournal | null>(null);
   
@@ -86,20 +86,16 @@ export default function DailyJournalRedesignedPage() {
     const formattedToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     setSelectedDate(formattedToday);
 
-    setTrades(getSavedTrades());
     setJournals(getSavedDailyJournals());
   }, []);
 
-  // Sync trades when updated globally
+  // Sync journals when updated globally
   useEffect(() => {
-    const handleTradesUpdate = () => setTrades(getSavedTrades());
     const handleJournalsUpdate = () => setJournals(getSavedDailyJournals());
 
-    window.addEventListener("tz_trades_update", handleTradesUpdate);
     window.addEventListener("tz_daily_journals_update", handleJournalsUpdate);
 
     return () => {
-      window.removeEventListener("tz_trades_update", handleTradesUpdate);
       window.removeEventListener("tz_daily_journals_update", handleJournalsUpdate);
     };
   }, []);
@@ -568,7 +564,7 @@ export default function DailyJournalRedesignedPage() {
                     >
                       <option value="">Select Strategy...</option>
                       <option value="Breakouts">Breakouts</option>
-                      <option value="VWAP Pulbacks">VWAP Pullbacks</option>
+                      <option value="VWAP Rejection">VWAP Rejection</option>
                       <option value="Gap & Go">Gap & Go</option>
                       <option value="Reversals / Fades">Reversals / Fades</option>
                       <option value="Mean Reversion">Mean Reversion</option>

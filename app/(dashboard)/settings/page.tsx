@@ -23,6 +23,7 @@ import {
   Copy,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { updatePasswordAction } from "@/app/actions/security";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,17 +36,17 @@ import {
 import {
   getSavedProfile,
   saveProfile,
-  getSavedTrades,
-  saveTrades,
   Profile,
 } from "@/lib/data";
 import { toast } from "sonner";
+import { useTrades } from "@/components/providers/TradeProvider";
+import { getProfileAction, updateProfileAction } from "@/app/actions/trade";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Section =
   | "Profile"
-  | "Broker Connections"
+  | "Trading Accounts"
   | "Notifications"
   | "Appearance"
   | "Security"
@@ -54,7 +55,7 @@ type Section =
 
 const NAV_ITEMS: { label: Section; icon: React.ElementType }[] = [
   { label: "Profile", icon: User },
-  { label: "Broker Connections", icon: Link2 },
+  { label: "Trading Accounts", icon: CreditCard },
   { label: "Notifications", icon: Bell },
   { label: "Appearance", icon: Palette },
   { label: "Security", icon: Shield },
@@ -66,10 +67,27 @@ const NAV_ITEMS: { label: Section; icon: React.ElementType }[] = [
 
 function ProfileSection() {
   const [form, setForm] = useState<Profile>(() => getSavedProfile());
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
-  const handleSave = () => {
-    saveProfile(form);
-    toast.success("Profile updated successfully!");
+  useEffect(() => {
+    async function loadProfile() {
+      const data = await getProfileAction();
+      if (data) {
+        setForm(prev => ({ ...prev, firstName: data.firstName || '', lastName: data.lastName || '', email: data.email || '' }));
+      }
+      setLoadingProfile(false);
+    }
+    loadProfile();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      await updateProfileAction({ firstName: form.firstName, lastName: form.lastName });
+      saveProfile(form); // fallback for local states if any
+      toast.success("Profile updated successfully!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update profile");
+    }
   };
 
   return (
@@ -83,7 +101,7 @@ function ProfileSection() {
               background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
             }}
           >
-            {(form.firstName[0] || "H").toUpperCase()}
+            {(form.firstName?.[0] || form.email?.[0] || "U").toUpperCase()}
           </div>
           <button
             onClick={() => toast.info("Avatar image upload is a demo feature")}
@@ -235,235 +253,114 @@ function ProfileSection() {
   );
 }
 
-// ─── Broker Connections ───────────────────────────────────────────────────────
+// ─── Trading Accounts ───────────────────────────────────────────────────────
 
-function BrokerConnectionsSection() {
-  const [dragOver, setDragOver] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [connections, setConnections] = useState<Record<string, boolean>>({
-    Tradovate: true,
-    "Interactive Brokers": false,
-    "TD Ameritrade": false,
-    TradeStation: false,
-  });
+function TradingAccountsSection() {
+  const { accounts, addAccount, deleteAccount } = useTrades();
+  const [newAccountName, setNewAccountName] = useState("");
+  const [newAccountBalance, setNewAccountBalance] = useState("10000");
+  const [isAdding, setIsAdding] = useState(false);
 
-  const handleToggleConnect = (broker: string) => {
-    const nextVal = !connections[broker];
-    setConnections((prev) => ({ ...prev, [broker]: nextVal }));
-    if (nextVal) {
-      toast.success(`Successfully connected to ${broker}!`);
-    } else {
-      toast.info(`Disconnected from ${broker}.`);
+  const handleAdd = async () => {
+    if (!newAccountName.trim() || !newAccountBalance) {
+      toast.error("Please fill in both fields.");
+      return;
+    }
+    setIsAdding(true);
+    try {
+      await addAccount(newAccountName, Number(newAccountBalance));
+      toast.success("Trading account created!");
+      setNewAccountName("");
+      setNewAccountBalance("10000");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to create account");
+    } finally {
+      setIsAdding(false);
     }
   };
 
-  const handleManualImport = () => {
-    setImporting(true);
-    toast.info("Parsing CSV files...");
-
-    setTimeout(() => {
-      const mockImported = [
-        {
-          id: Date.now(),
-          date: "2023-12-22",
-          time: "09:41",
-          symbol: "NVDA",
-          side: "Long" as const,
-          qty: 50,
-          entry: 488.5,
-          exit: 495.2,
-          grossPnl: 335.0,
-          commissions: 1.5,
-          netPnl: 333.5,
-          rr: 2.2,
-          duration: 35,
-          playbook: "Breakout",
-          tags: ["imported", "csv"],
-          hasNote: true,
-          status: "Closed" as const,
-          psychology: {
-            fomo: 1,
-            discipline: 5,
-            patience: 4,
-            focus: 5,
-            emotions: ["Calm", "Focused"],
-            notes: "Imported via CSV file. Clean breakout play.",
-          },
-          rulesChecklist: {
-            planFollowed: true,
-            riskManaged: true,
-            entryConfirmed: true,
-            stopLossSet: true,
-          },
-        },
-        {
-          id: Date.now() + 1,
-          date: "2023-12-22",
-          time: "10:15",
-          symbol: "TSLA",
-          side: "Short" as const,
-          qty: 100,
-          entry: 253.2,
-          exit: 255.8,
-          grossPnl: -260.0,
-          commissions: 2.5,
-          netPnl: -262.5,
-          rr: -1.0,
-          duration: 18,
-          playbook: "Reversal",
-          tags: ["imported", "csv"],
-          hasNote: false,
-          status: "Closed" as const,
-        },
-      ];
-
-      const currentTrades = getSavedTrades();
-      saveTrades([...currentTrades, ...mockImported]);
-      setImporting(false);
-      toast.success("CSV import complete! Added 2 trades to your journal.");
-    }, 1200);
+  const handleDelete = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete the account "${name}"? This will delete all trades associated with it!`)) {
+      try {
+        await deleteAccount(id);
+        toast.success(`Account "${name}" deleted.`);
+      } catch (e: any) {
+        toast.error(e.message || "Failed to delete account");
+      }
+    }
   };
 
-  const brokers = [
-    { name: "Tradovate", logo: "TRD" },
-    { name: "Interactive Brokers", logo: "IB" },
-    { name: "TD Ameritrade", logo: "TDA" },
-    { name: "TradeStation", logo: "TS" },
-  ];
-
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="space-y-3">
-        {brokers.map((broker) => {
-          const isConnected = connections[broker.name];
-          return (
-            <div
-              key={broker.name}
-              className="flex items-center justify-between px-4 py-3.5 rounded-xl border transition-all hover:shadow-sm"
-              style={{
-                borderColor: isConnected ? "#d6f0ea" : "#e8ecf4",
-                background: isConnected ? "#f0fdf4" : "#fff",
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                  style={{
-                    background: isConnected ? "#1a8a72" : "#6366f1",
-                  }}
-                >
-                  {broker.logo}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {broker.name}
-                  </p>
-                  {isConnected ? (
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <CheckCircle
-                        className="w-3.5 h-3.5 text-[#1a8a72]"
-                      />
-                      <span className="text-xs font-semibold text-[#1a8a72]">
-                        Connected
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        · Auto Sync Active
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <XCircle className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-xs text-gray-400 font-medium">Not connected</span>
-                    </div>
-                  )}
-                </div>
+        {accounts.map((account) => (
+          <div
+            key={account.id}
+            className="flex items-center justify-between px-4 py-3.5 rounded-xl border border-gray-100 bg-white shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                style={{ background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)" }}
+              >
+                {account.name.substring(0, 2).toUpperCase()}
               </div>
-              <div className="flex items-center gap-2">
-                {isConnected ? (
-                  <>
-                    <button
-                      onClick={() => toast.success(`${broker.name} logs synchronized!`)}
-                      className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      Sync
-                    </button>
-                    <button
-                      onClick={() => handleToggleConnect(broker.name)}
-                      className="text-xs font-bold text-red-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                    >
-                      Disconnect
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => handleToggleConnect(broker.name)}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-90 cursor-pointer"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
-                    }}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Connect
-                  </button>
-                )}
+              <div>
+                <p className="text-sm font-bold text-gray-800">{account.name}</p>
+                <p className="text-xs font-semibold text-gray-500 mt-0.5">
+                  Starting Balance: ${account.startingBalance.toLocaleString()}
+                </p>
               </div>
             </div>
-          );
-        })}
+            <button
+              onClick={() => handleDelete(account.id, account.name)}
+              className="text-xs font-bold text-red-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+            >
+              Delete Account
+            </button>
+          </div>
+        ))}
       </div>
 
-      {/* Manual Import */}
+      {/* Add New Account Form */}
       <div className="border-t border-gray-100 pt-5">
         <h3 className="text-sm font-semibold text-gray-800 mb-3">
-          Import Trades Manually
+          Create New Trading Account
         </h3>
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            handleManualImport();
-          }}
-          onClick={handleManualImport}
-          className="rounded-xl border-2 border-dashed px-6 py-8 text-center transition-all cursor-pointer hover:border-indigo-400"
-          style={{
-            borderColor: dragOver ? "#6366f1" : "#d1d5db",
-            background: dragOver ? "#f0f0ff" : "#f9fafb",
-            opacity: importing ? 0.6 : 1,
-            pointerEvents: importing ? "none" : "auto",
-          }}
-        >
-          {importing ? (
-            <RefreshCw className="w-8 h-8 mx-auto text-indigo-500 mb-2 animate-spin" />
-          ) : (
-            <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-          )}
-          <p className="text-sm font-bold text-gray-700 mb-0.5">
-            {importing
-              ? "Parsing trade files..."
-              : dragOver
-                ? "Drop your file here"
-                : "Drag & drop your trade file here"}
-          </p>
-          <p className="text-xs text-gray-400 mb-3">or click to browse files</p>
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            {["CSV", "XLSX", "XLS"].map((fmt) => (
-              <span
-                key={fmt}
-                className="text-xs font-bold px-2.5 py-1 rounded-full"
-                style={{ background: "#e8ecf4", color: "#6366f1" }}
-              >
-                .{fmt}
-              </span>
-            ))}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-gray-500 font-bold uppercase tracking-wider">
+              Account Name
+            </Label>
+            <Input
+              value={newAccountName}
+              onChange={(e) => setNewAccountName(e.target.value)}
+              placeholder="e.g. Apex 50k Challenge"
+              className="text-xs font-semibold text-gray-800"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-gray-500 font-bold uppercase tracking-wider">
+              Starting Balance ($)
+            </Label>
+            <Input
+              type="number"
+              value={newAccountBalance}
+              onChange={(e) => setNewAccountBalance(e.target.value)}
+              placeholder="10000"
+              className="text-xs font-semibold text-gray-800"
+            />
           </div>
         </div>
+        <button
+          onClick={handleAdd}
+          disabled={isAdding}
+          className="mt-4 px-5 py-2 rounded-lg text-xs font-bold text-white transition-all hover:opacity-90 cursor-pointer shadow-sm disabled:opacity-70 flex items-center gap-1.5"
+          style={{ background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)" }}
+        >
+          <Plus size={14} />
+          {isAdding ? "Creating..." : "Create Account"}
+        </button>
       </div>
     </div>
   );
@@ -530,6 +427,19 @@ function AppearanceSection() {
   );
   const [defaultPage, setDefaultPage] = useState("dashboard");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("tz_theme") as any;
+      if (savedTheme) setTheme(savedTheme);
+      const savedAccent = localStorage.getItem("tz_accent");
+      if (savedAccent) setAccent(savedAccent);
+      const savedLayout = localStorage.getItem("tz_layout") as any;
+      if (savedLayout) setLayout(savedLayout);
+      const savedPage = localStorage.getItem("tz_default_page");
+      if (savedPage) setDefaultPage(savedPage);
+    }
+  }, []);
+
   const accents = [
     "#6366f1",
     "#10b981",
@@ -550,6 +460,8 @@ function AppearanceSection() {
               key={t}
               onClick={() => {
                 setTheme(t);
+                localStorage.setItem("tz_theme", t);
+                window.dispatchEvent(new Event("tz_appearance_change"));
                 toast.success(`Theme switched to ${t}`);
               }}
               className="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all w-28 cursor-pointer"
@@ -592,6 +504,8 @@ function AppearanceSection() {
               key={color}
               onClick={() => {
                 setAccent(color);
+                localStorage.setItem("tz_accent", color);
+                window.dispatchEvent(new Event("tz_appearance_change"));
                 toast.success("Accent color updated");
               }}
               className="w-8 h-8 rounded-full transition-transform hover:scale-110 cursor-pointer shadow-sm"
@@ -632,6 +546,8 @@ function AppearanceSection() {
                   className="text-sm font-semibold text-gray-700"
                   onClick={() => {
                     setLayout(l);
+                    localStorage.setItem("tz_layout", l);
+                    window.dispatchEvent(new Event("tz_appearance_change"));
                     toast.success(`Layout changed to ${l}`);
                   }}
                 >
@@ -659,6 +575,7 @@ function AppearanceSection() {
           value={defaultPage}
           onValueChange={(v) => {
             setDefaultPage(v);
+            localStorage.setItem("tz_default_page", v);
             toast.success(`Default page set to: ${v}`);
           }}
         >
@@ -689,8 +606,16 @@ function SecuritySection() {
     new: "",
     confirm: "",
   });
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleUpdatePassword = () => {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTwoFa = localStorage.getItem("tz_2fa");
+      if (savedTwoFa === "true") setTwoFA(true);
+    }
+  }, []);
+
+  const handleUpdatePassword = async () => {
     if (!passwords.current || !passwords.new || !passwords.confirm) {
       toast.error("Please fill in all password fields.");
       return;
@@ -699,8 +624,17 @@ function SecuritySection() {
       toast.error("New passwords do not match.");
       return;
     }
-    toast.success("Password updated successfully!");
-    setPasswords({ current: "", new: "", confirm: "" });
+    
+    setIsUpdating(true);
+    try {
+      await updatePasswordAction(passwords.new);
+      toast.success("Password updated successfully!");
+      setPasswords({ current: "", new: "", confirm: "" });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update password");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const sessions = [
@@ -808,12 +742,13 @@ function SecuritySection() {
           </div>
           <button
             onClick={handleUpdatePassword}
-            className="px-5 py-2 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-90 cursor-pointer shadow-sm"
+            disabled={isUpdating}
+            className="px-5 py-2 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-90 cursor-pointer shadow-sm disabled:opacity-50"
             style={{
               background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
             }}
           >
-            Update Password
+            {isUpdating ? "Updating..." : "Update Password"}
           </button>
         </div>
       </div>
@@ -842,6 +777,7 @@ function SecuritySection() {
               checked={twoFA}
               onCheckedChange={(v) => {
                 setTwoFA(v);
+                localStorage.setItem("tz_2fa", String(v));
                 if (v) {
                   toast.success("Two-Factor Authentication Enabled");
                 } else {
@@ -1204,7 +1140,7 @@ export default function SettingsPage() {
 
   const sectionContent: Record<Section, React.ReactNode> = {
     Profile: <ProfileSection />,
-    "Broker Connections": <BrokerConnectionsSection />,
+    "Trading Accounts": <TradingAccountsSection />,
     Notifications: <NotificationsSection />,
     Appearance: <AppearanceSection />,
     Security: <SecuritySection />,
@@ -1213,7 +1149,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="px-5 py-4 min-h-full" style={{ background: "#f4f6fb" }}>
+    <div className="tz-page">
       {/* Page Header */}
       <div className="mb-5">
         <h1 className="text-xl font-bold text-gray-900">Settings</h1>

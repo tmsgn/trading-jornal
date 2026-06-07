@@ -1,44 +1,28 @@
-import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
-import "./globals.css";
-import { cn } from "@/lib/utils";
-import { Sidebar } from "@/components/dashboard/Sidebar";
-import { TopBar } from "@/components/dashboard/TopBar";
+import "@/app/globals.css";
+import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const inter = Inter({ subsets: ["latin"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "TradeZella – Trading Journal & Performance Analytics",
-  description:
-    "Analyze your trading performance with TradeZella. Track P&L, win rates, and improve your strategy with AI-powered insights.",
+export const metadata = {
+  title: "ApexTrade | Professional Trading Journal",
+  description: "Advanced analytics and journaling for professional traders.",
 };
+
+import { AppearanceProvider } from "@/components/providers/AppearanceProvider";
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html
-      lang="en"
-      className={cn("h-full antialiased", inter.variable, geistMono.variable)}
-    >
-      <body className="min-h-full flex">
-        <div
-          className="flex h-screen w-full overflow-hidden"
-          style={{ background: "#f4f6fb" }}
-        >
-          <Sidebar />
-          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-            <TopBar />
-            <div className="flex-1 overflow-y-auto">{children}</div>
-          </div>
-        </div>
+    <html lang="en" className="h-full antialiased">
+      <body className={`min-h-full flex ${inter.className} layout-comfortable`}>
+        <AppearanceProvider>
+          {children}
+          <Toaster position="top-center" richColors />
+        </AppearanceProvider>
       </body>
     </html>
   );

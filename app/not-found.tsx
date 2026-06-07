@@ -3,10 +3,7 @@ import { Home, AlertCircle } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div
-      className="flex flex-col items-center justify-center flex-1 h-full gap-6 py-20"
-      style={{ background: "#f4f6fb" }}
-    >
+    <div className="tz-page flex flex-col items-center justify-center flex-1 h-full gap-6 py-20">
       <div className="flex flex-col items-center gap-4 text-center max-w-sm">
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center"

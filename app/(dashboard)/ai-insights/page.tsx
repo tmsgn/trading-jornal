@@ -26,8 +26,10 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { Trade, getSavedTrades } from "@/lib/data";
+import { Trade } from "@/lib/data";
+import { useTrades } from "@/components/providers/TradeProvider";
 import { toast } from "sonner";
+import { generateInsightsAction } from "@/app/actions/ai";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,21 +66,14 @@ interface Recommendation {
 export default function AIInsightsPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
-  const [trades, setTrades] = useState<Trade[]>(() => getSavedTrades());
+  const { trades } = useTrades();
 
-  // Sync state across navigations
-  useEffect(() => {
-    const handleUpdate = () => {
-      setTrades(getSavedTrades());
-    };
-    window.addEventListener("tz_trades_update", handleUpdate);
-    return () => {
-      window.removeEventListener("tz_trades_update", handleUpdate);
-    };
-  }, []);
+  const [patterns, setPatterns] = useState<Pattern[]>([]);
+  const [correlations, setCorrelations] = useState<Correlation[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
   // Analyze Now loading workflow simulation
-  function handleAnalyze() {
+  async function handleAnalyze() {
     setAnalyzing(true);
     setAnalysisStep(0);
     
@@ -94,16 +89,22 @@ export default function AIInsightsPage() {
         if (prev < steps.length - 1) {
           return prev + 1;
         }
-        clearInterval(timer);
         return prev;
       });
-    }, 500);
+    }, 800);
 
-    setTimeout(() => {
+    try {
+      const insights = await generateInsightsAction(trades);
+      setPatterns(insights.patterns || []);
+      setCorrelations(insights.correlations || []);
+      setRecommendations(insights.recommendations || []);
+      toast.success(`AI Analysis complete! Scanned ${trades.length} trades.`);
+    } catch (error) {
+      toast.error("Failed to generate insights.");
+    } finally {
       clearInterval(timer);
       setAnalyzing(false);
-      toast.success(`AI Analysis complete! Scanned ${trades.length} trades.`);
-    }, 2200);
+    }
   }
 
   // ─── Dynamic Metrics & Calculations ──────────────────────────────────────────
@@ -122,7 +123,7 @@ export default function AIInsightsPage() {
     // 3. Avg Hold Time
     const avgHold = closed.length > 0 ? closed.reduce((sum, t) => sum + t.duration, 0) / closed.length : 0;
 
-    // 4. Zella Score Dimensions
+    // 4. Apex Score Dimensions
     // Rules Checklist Compliance
     const tradesWithChecklist = trades.filter((t) => t.rulesChecklist);
     const riskCompliance = tradesWithChecklist.length > 0
@@ -191,49 +192,11 @@ export default function AIInsightsPage() {
     { label: "Risk Mgmt", score: dynamicMetrics.scores.riskMgmt, color: "#ef4444" },
   ];
 
-  const patterns: Pattern[] = [
-    { name: "Breakout Pattern", accuracy: Math.round(dynamicMetrics.winRate + 4), occurrences: trades.filter((t) => t.playbook === "Breakout").length || 8, avgPnl: 1240 },
-    { name: "VWAP Rejection", accuracy: Math.round(dynamicMetrics.winRate), occurrences: trades.filter((t) => t.playbook === "VWAP Rejection").length || 6, avgPnl: 890 },
-    { name: "Gap & Go", accuracy: Math.round(dynamicMetrics.winRate - 6), occurrences: trades.filter((t) => t.playbook === "Gap & Go").length || 4, avgPnl: -120 },
-    { name: "Reversal", accuracy: Math.round(dynamicMetrics.winRate - 2), occurrences: trades.filter((t) => t.playbook === "Reversal").length || 5, avgPnl: 680 },
-  ];
-
-  const correlations: Correlation[] = [
-    { factor: "Market Condition", condition: "Trending", winRate: `${Math.round(dynamicMetrics.winRate + 8)}%`, avgPnl: "+$520" },
-    { factor: "Market Condition", condition: "Choppy", winRate: `${Math.round(dynamicMetrics.winRate - 20)}%`, avgPnl: "-$180" },
-    { factor: "Time of Day", condition: "9:30-11am", winRate: `${Math.round(dynamicMetrics.winRate + 5)}%`, avgPnl: "+$410" },
-    { factor: "Time of Day", condition: "2pm-4pm", winRate: `${Math.round(dynamicMetrics.winRate - 25)}%`, avgPnl: "-$290" },
-    { factor: "Position Size", condition: "< 100 shares", winRate: `${Math.round(dynamicMetrics.winRate + 3)}%`, avgPnl: "+$340" },
-    { factor: "Position Size", condition: "> 200 shares", winRate: `${Math.round(dynamicMetrics.winRate - 15)}%`, avgPnl: "-$120" },
-  ];
-
-  const recommendations: Recommendation[] = [
-    {
-      priority: "High",
-      title: "Stop trading after 2 consecutive losses",
-      description: `Your recovery win rate after 2+ consecutive losses is only ${Math.round(dynamicMetrics.winRate * 0.4)}%. Taking a break resets your psychology and prevents revenge trading cycles that cost an average of $560 per session.`,
-      impact: "Est. saves $890/month",
-      icon: <AlertTriangle size={16} />,
-    },
-    {
-      priority: "Medium",
-      title: "Increase TSLA position size by 25%",
-      description: `Your TSLA win rate of ${Math.round(dynamicMetrics.winRate + 10)}% over trades is statistically significant. Scaling from 100 to 125 shares per trade is justified by your edge and current risk parameters.`,
-      impact: "Est. +$340/month",
-      icon: <TrendingUp size={16} />,
-    },
-    {
-      priority: "Low",
-      title: "Focus on High compliance rules",
-      description: "Trades where you checked all entry preparation rules (Pre-market plan, Set stop loss) yielded a 71% win rate, compared to 34% on partial rule violations.",
-      impact: "Est. +$210/month",
-      icon: <Zap size={16} />,
-    },
-  ];
+  // AI Data is now dynamically managed by State variables above.
 
   const kpis = [
     {
-      label: "Zella Score",
+      label: "Apex Score",
       value: `${dynamicMetrics.zellaScore}/100`,
       sub: "+3 this month",
       color: "#6366f1",
@@ -270,10 +233,7 @@ export default function AIInsightsPage() {
   ];
 
   return (
-    <div
-      className="flex flex-col gap-4 p-5 relative"
-      style={{ background: "#f4f6fb", minHeight: "100%" }}
-    >
+    <div className="tz-page relative">
       {/* AI Processing Overlay Screen */}
       {analyzing && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md flex flex-col items-center justify-center z-50 rounded-xl transition-all">
@@ -281,7 +241,7 @@ export default function AIInsightsPage() {
             <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-4">
               <Brain size={32} className="text-[#6366f1] animate-pulse" />
             </div>
-            <h3 className="text-base font-bold text-gray-800">Zella Engine Scanning</h3>
+            <h3 className="text-base font-bold text-gray-800">Apex Engine Scanning</h3>
             <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden mt-3 mb-2">
               <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
@@ -344,7 +304,7 @@ export default function AIInsightsPage() {
         ))}
       </div>
 
-      {/* Zella Score Card */}
+      {/* Apex Score Card */}
       <div
         className="tz-card p-6 bg-white"
         style={{
@@ -355,7 +315,7 @@ export default function AIInsightsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Brain size={18} className="text-indigo-500" />
-              <h2 className="text-sm font-bold text-gray-800">Zella Score</h2>
+              <h2 className="text-sm font-bold text-gray-800">Apex Score</h2>
               <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-100 text-indigo-600">
                 AI Powered
               </span>

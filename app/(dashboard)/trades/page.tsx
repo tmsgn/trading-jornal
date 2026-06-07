@@ -20,7 +20,8 @@ import {
   Plus,
 } from "lucide-react";
 import { TradeDetailDrawer } from "@/components/dashboard/TradeDetailDrawer";
-import { Trade, getSavedTrades, saveTrades } from "@/lib/data";
+import { Trade } from "@/lib/data";
+import { useTrades } from "@/components/providers/TradeProvider";
 import { toast } from "sonner";
 
 type SideFilter = "All" | "Long" | "Short";
@@ -62,8 +63,8 @@ function formatDateShort(dateStr: string): string {
 }
 
 export default function TradesPage() {
-  // Trades State
-  const [trades, setTrades] = useState<Trade[]>(() => getSavedTrades());
+  // Trades State from Context
+  const { trades, updateTrade, deleteTrade } = useTrades();
 
   // Filters
   const [symbol, setSymbol] = useState("");
@@ -75,31 +76,16 @@ export default function TradesPage() {
   // UI state
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<string | number | null>(null);
 
-  // Sync state across navigations
-  useEffect(() => {
-    const handleUpdate = () => {
-      setTrades(getSavedTrades());
-    };
-    window.addEventListener("tz_trades_update", handleUpdate);
-    return () => {
-      window.removeEventListener("tz_trades_update", handleUpdate);
-    };
-  }, []);
-
-  const handleSaveTrade = (updatedTrade: Trade) => {
-    const updatedList = trades.map((t) => (t.id === updatedTrade.id ? updatedTrade : t));
-    saveTrades(updatedList);
-    toast.success("Trade details updated successfully");
+  const handleSaveTrade = async (updatedTrade: Trade) => {
+    await updateTrade(updatedTrade.id, updatedTrade);
   };
 
-  const handleDeleteTrade = (id: number, e: React.MouseEvent) => {
+  const handleDeleteTrade = async (id: string | number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm("Are you sure you want to delete this trade?")) {
-      const updatedList = trades.filter((t) => t.id !== id);
-      saveTrades(updatedList);
-      toast.success("Trade deleted successfully");
+      await deleteTrade(id);
     }
   };
 
@@ -181,10 +167,7 @@ export default function TradesPage() {
   ];
 
   return (
-    <div
-      className="flex flex-col gap-4 px-5 py-5"
-      style={{ background: "#f4f6fb", minHeight: "100%" }}
-    >
+    <div className="tz-page">
       {/* ── Page Header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>

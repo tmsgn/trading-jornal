@@ -21,7 +21,7 @@ import {
 } from "recharts";
 import { Trade } from "@/lib/data";
 
-// ─── Zella Score (Radar Chart) ─────────────────────────────────────────────
+// ─── Apex Score (Radar Chart) ─────────────────────────────────────────────
 export function ZellaScoreCard({ trades }: { trades: Trade[] }) {
   const stats = useMemo(() => {
     const closed = trades.filter((t) => t.status === "Closed");
@@ -61,7 +61,7 @@ export function ZellaScoreCard({ trades }: { trades: Trade[] }) {
   return (
     <div className="tz-card flex flex-col p-4 h-full bg-white">
       <div className="flex items-center gap-1 mb-2">
-        <span className="text-sm font-semibold text-gray-800">Zella Score</span>
+        <span className="text-sm font-semibold text-gray-800">Apex Score</span>
         <Info size={13} className="text-gray-400 cursor-help" />
       </div>
       <div className="flex-1 min-h-0 flex items-center justify-center">
@@ -87,7 +87,7 @@ export function ZellaScoreCard({ trades }: { trades: Trade[] }) {
         </ResponsiveContainer>
       </div>
       <div className="flex items-center gap-1.5 mt-2 border-t border-gray-50 pt-2 shrink-0">
-        <span className="text-xs text-gray-500 font-semibold">Your Zella Score:</span>
+        <span className="text-xs text-gray-500 font-semibold">Your Apex Score:</span>
         <span className="text-base font-extrabold" style={{ color: "#26a69a" }}>
           {stats.overallScore}
         </span>

@@ -23,7 +23,8 @@ import {
   Target,
   Calendar,
 } from "lucide-react";
-import { Trade, getSavedTrades } from "@/lib/data";
+import { Trade } from "@/lib/data";
+import { useTrades } from "@/components/providers/TradeProvider";
 
 type DateRange = "1W" | "1M" | "3M" | "6M" | "YTD" | "All";
 
@@ -145,20 +146,9 @@ function KpiCard({
 
 export default function AnalyticsPage() {
   const [range, setRange] = useState<DateRange>("All");
-  const [trades, setTrades] = useState<Trade[]>(() => getSavedTrades());
+  const { trades } = useTrades();
 
   const ranges: DateRange[] = ["1W", "1M", "3M", "6M", "YTD", "All"];
-
-  // Sync state across navigations
-  useEffect(() => {
-    const handleUpdate = () => {
-      setTrades(getSavedTrades());
-    };
-    window.addEventListener("tz_trades_update", handleUpdate);
-    return () => {
-      window.removeEventListener("tz_trades_update", handleUpdate);
-    };
-  }, []);
 
   // Filter trades based on date range selected (Relative to December 2023)
   const rangeFilteredTrades = useMemo(() => {
@@ -354,10 +344,7 @@ export default function AnalyticsPage() {
   }, [rangeFilteredTrades]);
 
   return (
-    <div
-      className="flex flex-col gap-4 px-5 py-5"
-      style={{ background: "#f4f6fb", minHeight: "100%" }}
-    >
+    <div className="tz-page">
       {/* ── Page Header ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>

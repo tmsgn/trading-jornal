@@ -24,8 +24,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import React, { useState, useEffect } from "react";
-import { getSavedProfile, getSavedTrades, saveTrades } from "@/lib/data";
+import { BRAND, getSavedProfile, TradeSide } from "@/lib/data";
 import { toast } from "sonner";
+import { useTrades } from "@/components/providers/TradeProvider";
+import { logout } from "@/app/(auth)/login/actions";
+import { getPlaybooksAction } from "@/app/actions/playbooks";
 
 const topNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
@@ -37,22 +40,39 @@ const topNavItems = [
   { icon: Package, label: "Playbooks", href: "/playbooks" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ profile: serverProfile }: { profile?: any }) {
   const pathname = usePathname();
-  const [profile, setProfile] = useState(() => getSavedProfile());
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // Add Trade Modal State
+  const { addTrade } = useTrades();
+  const [profile, setProfile] = useState(() => serverProfile || getSavedProfile());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formSymbol, setFormSymbol] = useState("");
   const [formSide, setFormSide] = useState<"Long" | "Short">("Long");
   const [formQty, setFormQty] = useState(100);
-  const [formEntry, setFormEntry] = useState(100);
-  const [formExit, setFormExit] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formTime, setFormTime] = useState("09:30");
-  const [formPlaybook, setFormPlaybook] = useState("None");
+  const [formPlaybook, setFormPlaybook] = useState<string>("None");
   const [formTags, setFormTags] = useState("");
+  
+  // Advanced Fields
+  const [formCommissions, setFormCommissions] = useState<number>(0);
+  const [formNetPnlOverride, setFormNetPnlOverride] = useState<string>("");
+  const [formRr, setFormRr] = useState<string>("");
+  const [formNotes, setFormNotes] = useState<string>("");
+  
+  const [playbooks, setPlaybooks] = useState<{id: string, name: string}[]>([]);
+
+  const resetForm = () => {
+    setFormSymbol("");
+    setFormSide("Long");
+    setFormQty(100);
+    setFormPlaybook("None");
+    setFormTags("");
+    setFormCommissions(0);
+    setFormRr("");
+    setFormNetPnlOverride("");
+    setFormNotes("");
+  };
 
   // Set default date on client to avoid hydration mismatch
   useEffect(() => {
@@ -72,6 +92,11 @@ export function Sidebar() {
         setIsCollapsed(saved === "true");
       }
     }
+    
+    // Fetch playbooks
+    getPlaybooksAction().then(data => {
+      setPlaybooks(data);
+    });
   }, []);
 
   // Listen for global open modal events
@@ -95,57 +120,41 @@ export function Sidebar() {
     }
   };
 
-  useEffect(() => {
-    const handleUpdate = () => {
-      setProfile(getSavedProfile());
-    };
-    window.addEventListener("tz_profile_update", handleUpdate);
-    return () => {
-      window.removeEventListener("tz_profile_update", handleUpdate);
-    };
-  }, []);
-
-  const handleAddTradeSubmit = (e: React.FormEvent) => {
+  const handleAddTrade = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formSymbol) return;
+    if (!formSymbol || !formDate || !formTime || !formQty || !formNetPnlOverride) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
 
-    const exitVal = formExit.trim() !== "" ? parseFloat(formExit) : null;
-    const isClosed = exitVal !== null;
-    const grossPnlVal = isClosed
-      ? (exitVal - formEntry) * formQty * (formSide === "Long" ? 1 : -1)
-      : 0;
-    const comms = isClosed ? 2.5 : 0;
-    const netPnlVal = grossPnlVal - comms;
-    const rrVal = isClosed
-      ? parseFloat(((exitVal - formEntry) / (formEntry * 0.01)).toFixed(1))
-      : 0;
+    const netPnl = parseFloat(formNetPnlOverride || "0");
+    const parsedRr = formRr ? parseFloat(formRr) : 0;
 
     const newTrade = {
-      id: Date.now(),
       date: formDate,
       time: formTime,
       symbol: formSymbol.toUpperCase(),
       side: formSide,
       qty: formQty,
-      entry: formEntry,
-      exit: exitVal,
-      grossPnl: grossPnlVal,
-      commissions: comms,
-      netPnl: netPnlVal,
-      rr: rrVal,
-      duration: isClosed ? Math.floor(Math.random() * 80) + 10 : 0,
-      playbook: formPlaybook === "None" ? null : formPlaybook,
+      entry: 0,
+      exit: 0,
+      netPnl: netPnl,
+      rr: parsedRr,
+      duration: 0,
+      commissions: formCommissions,
+      fees: 0,
+      playbookId: formPlaybook === "None" ? null : formPlaybook,
+      initialRr: parsedRr,
+      notes: formNotes,
       tags: formTags
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean),
-      hasNote: false,
-      status: isClosed ? ("Closed" as const) : ("Open" as const),
+      hasNote: !!formNotes,
+      status: "Closed" as const,
     };
 
-    const currentTrades = getSavedTrades();
-    const updated = [newTrade, ...currentTrades];
-    saveTrades(updated);
+    await addTrade(newTrade as any);
 
     // Reset form
     setFormSymbol("");
@@ -163,21 +172,17 @@ export function Sidebar() {
   return (
     <>
       <aside
-        className={`flex flex-col h-screen py-3 gap-1 flex-shrink-0 transition-all duration-300 ${
+        className={`flex flex-col h-screen py-3 gap-1 flex-shrink-0 transition-all duration-300 bg-white border-r border-gray-100 ${
           isCollapsed ? "w-[56px] items-center" : "w-[240px] px-3"
         }`}
-        style={{
-          background: "#1e2030",
-          borderRight: "1px solid rgba(255,255,255,0.06)",
-        }}
       >
         {/* Logo Area */}
         <Link href="/" className="w-full">
           {isCollapsed ? (
             <div
-              className="flex items-center justify-center w-9 h-9 rounded-lg mb-3 cursor-pointer hover:opacity-90 transition-all mx-auto"
+              className="flex items-center justify-center w-9 h-9 rounded-lg mb-3 cursor-pointer hover:opacity-90 transition-all mx-auto shadow-sm"
               style={{
-                background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+                background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
               }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -197,9 +202,9 @@ export function Sidebar() {
           ) : (
             <div className="flex items-center gap-2.5 px-3 py-1.5 mb-3 cursor-pointer hover:opacity-90 transition-all">
               <div
-                className="flex items-center justify-center w-8 h-8 rounded-lg"
+                className="flex items-center justify-center w-8 h-8 rounded-lg shadow-sm"
                 style={{
-                  background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+                  background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
                 }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -216,8 +221,8 @@ export function Sidebar() {
                   />
                 </svg>
               </div>
-              <span className="font-bold text-white text-base tracking-tight">
-                trade<span className="text-indigo-400">zella</span>
+              <span className="font-bold text-gray-900 text-[17px] tracking-tight">
+                {BRAND.name.substring(0, 4)}<span className="text-emerald-500">{BRAND.name.substring(4)}</span>
               </span>
             </div>
           )}
@@ -230,9 +235,9 @@ export function Sidebar() {
               {isCollapsed ? (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="flex items-center justify-center w-9 h-9 rounded-lg mb-3 transition-all hover:opacity-90 mx-auto"
+                  className="flex items-center justify-center w-9 h-9 rounded-lg mb-3 transition-all hover:opacity-90 mx-auto shadow-sm"
                   style={{
-                    background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+                    background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
                   }}
                 >
                   <Plus size={18} color="white" />
@@ -240,9 +245,9 @@ export function Sidebar() {
               ) : (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="flex items-center justify-center w-full h-9 rounded-lg mb-3 transition-all hover:opacity-90 gap-1.5 px-4 font-semibold text-xs text-white"
+                  className="flex items-center justify-center w-full h-9 rounded-lg mb-3 transition-all hover:opacity-90 gap-1.5 px-4 font-semibold text-xs text-white shadow-sm"
                   style={{
-                    background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+                    background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
                   }}
                 >
                   <Plus size={14} color="white" />
@@ -272,8 +277,8 @@ export function Sidebar() {
                         <div
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all cursor-pointer font-medium ${
                             isActive
-                              ? "bg-indigo-600/20 text-[#818cf8]"
-                              : "text-[#a8b3cf] hover:bg-white/8 hover:text-white"
+                              ? "bg-emerald-50 text-emerald-600"
+                              : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                           }`}
                         >
                           <item.icon size={18} className="flex-shrink-0" />
@@ -293,7 +298,7 @@ export function Sidebar() {
             {/* Toggle button */}
             <button
               onClick={toggleSidebar}
-              className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-white/8 text-[#a8b3cf] hover:text-white transition-all mb-1 ${
+              className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-900 transition-all mb-1 ${
                 isCollapsed ? "" : "w-full justify-start px-3 gap-3"
               }`}
             >
@@ -318,8 +323,8 @@ export function Sidebar() {
                     <div
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all cursor-pointer font-medium ${
                         pathname === "/settings"
-                          ? "bg-indigo-600/20 text-[#818cf8]"
-                          : "text-[#a8b3cf] hover:bg-white/8 hover:text-white"
+                          ? "bg-emerald-50 text-emerald-600"
+                          : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
                       <Settings size={18} className="flex-shrink-0" />
@@ -335,32 +340,32 @@ export function Sidebar() {
               <TooltipTrigger asChild>
                 <div className="w-full mt-1">
                   {isCollapsed ? (
-                    <button className="flex justify-center w-full">
-                      <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-indigo-500/40">
+                    <button className="flex justify-center w-full" onClick={() => logout()}>
+                      <Avatar className="w-8 h-8 cursor-pointer shadow-sm border border-emerald-500/20">
                         <AvatarFallback
                           className="text-xs font-semibold"
-                          style={{ background: "#3b4168", color: "#a8b3cf" }}
+                          style={{ background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)", color: "#ffffff" }}
                         >
-                          {(profile.firstName[0] || "H").toUpperCase()}
+                          {(profile?.firstName?.[0] || profile?.email?.[0] || "U").toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </button>
                   ) : (
-                    <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-white/5 border border-white/5 mx-1">
-                      <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-indigo-500/40">
+                    <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-gray-50 border border-gray-100 mx-1 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => logout()} title="Click to Logout">
+                      <Avatar className="w-8 h-8 flex-shrink-0 shadow-sm border border-emerald-500/20">
                         <AvatarFallback
                           className="text-xs font-semibold"
-                          style={{ background: "#3b4168", color: "#a8b3cf" }}
+                          style={{ background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)", color: "#ffffff" }}
                         >
-                          {(profile.firstName[0] || "H").toUpperCase()}
+                          {(profile?.firstName?.[0] || profile?.email?.[0] || "U").toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-xs font-semibold text-white truncate leading-tight">
-                          {profile.firstName} {profile.lastName}
+                        <span className="text-xs font-semibold text-gray-900 truncate leading-tight">
+                          {profile?.firstName ? `${profile.firstName} ${profile.lastName || ''}` : profile?.email?.split('@')[0]}
                         </span>
-                        <span className="text-[10px] text-gray-400 truncate leading-none mt-0.5">
-                          {profile.email}
+                        <span className="text-[10px] text-gray-500 truncate leading-none mt-0.5">
+                          {profile?.email}
                         </span>
                       </div>
                     </div>
@@ -378,7 +383,7 @@ export function Sidebar() {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div>
                 <h3 className="text-base font-bold text-gray-950">Add New Trade</h3>
                 <p className="text-xs text-gray-500 mt-0.5">Manually record a trade to your journal</p>
@@ -392,7 +397,7 @@ export function Sidebar() {
             </div>
 
             {/* Modal Body / Form */}
-            <form onSubmit={handleAddTradeSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+            <form onSubmit={handleAddTrade} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
               <div className="grid grid-cols-2 gap-4">
                 {/* Symbol */}
                 <div className="space-y-1">
@@ -403,7 +408,7 @@ export function Sidebar() {
                     placeholder="e.g. TSLA"
                     value={formSymbol}
                     onChange={(e) => setFormSymbol(e.target.value.toUpperCase())}
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold"
                   />
                 </div>
 
@@ -437,7 +442,7 @@ export function Sidebar() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {/* Qty */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quantity</label>
@@ -447,34 +452,21 @@ export function Sidebar() {
                     min="1"
                     value={formQty}
                     onChange={(e) => setFormQty(parseInt(e.target.value) || 0)}
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
 
-                {/* Entry */}
+                {/* Net P&L Override */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Entry Price</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Net P&L ($)</label>
                   <input
                     type="number"
+                    step="any"
+                    placeholder="e.g. 500"
                     required
-                    step="any"
-                    min="0.0001"
-                    value={formEntry}
-                    onChange={(e) => setFormEntry(parseFloat(e.target.value) || 0)}
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                  />
-                </div>
-
-                {/* Exit */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Exit Price (Optional)</label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="Open position"
-                    value={formExit}
-                    onChange={(e) => setFormExit(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                    value={formNetPnlOverride}
+                    onChange={(e) => setFormNetPnlOverride(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
                   />
                 </div>
               </div>
@@ -488,7 +480,7 @@ export function Sidebar() {
                     required
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
 
@@ -500,7 +492,7 @@ export function Sidebar() {
                     required
                     value={formTime}
                     onChange={(e) => setFormTime(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -512,14 +504,12 @@ export function Sidebar() {
                   <select
                     value={formPlaybook}
                     onChange={(e) => setFormPlaybook(e.target.value)}
-                    className="w-full h-9 px-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                    className="w-full h-9 px-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
                   >
                     <option value="None">None</option>
-                    <option value="Breakout">Breakout</option>
-                    <option value="VWAP Rejection">VWAP Rejection</option>
-                    <option value="Gap & Go">Gap & Go</option>
-                    <option value="Reversal">Reversal</option>
-                    <option value="Mean Reversion">Mean Reversion</option>
+                    {playbooks.map(pb => (
+                      <option key={pb.id} value={pb.id}>{pb.name}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -536,6 +526,44 @@ export function Sidebar() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-3 gap-3">
+                {/* Commissions */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Commissions ($)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={formCommissions}
+                    onChange={(e) => setFormCommissions(parseFloat(e.target.value) || 0)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                  />
+                </div>
+
+                {/* Risk / Reward */}
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Risk / Reward (R)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 2.5"
+                    value={formRr}
+                    onChange={(e) => setFormRr(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Trade Notes</label>
+                <textarea
+                  placeholder="What was the setup? How did you feel?"
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  className="w-full h-20 p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                />
+              </div>
+
               {/* Modal Actions */}
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
                 <button
@@ -547,9 +575,9 @@ export function Sidebar() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 h-9 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition-all"
+                  className="px-4 h-9 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition-all shadow-sm"
                   style={{
-                    background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+                    background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
                   }}
                 >
                   Save Trade

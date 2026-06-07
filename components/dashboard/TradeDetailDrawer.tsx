@@ -24,6 +24,8 @@ import {
   Smile,
   Shield,
   Zap,
+  Hash,
+  Coins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -146,18 +148,18 @@ export function TradeDetailDrawer({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[550px] border-l border-gray-100 p-0 flex flex-col h-full bg-white text-gray-800"
+        className="w-full sm:max-w-[600px] md:max-w-3xl lg:max-w-4xl xl:max-w-[1100px] border-l border-gray-200 dark:border-[#1e2030] p-0 flex flex-col h-full bg-white dark:bg-[#0b0c10] text-gray-800 dark:text-gray-100 shadow-2xl"
       >
         {/* Header Section */}
-        <div className="p-5 border-b border-gray-100 shrink-0">
+        <div className="p-6 border-b border-gray-100 dark:border-[#1e2030] shrink-0 bg-gray-50/30 dark:bg-[#0f1016]">
           <div className="flex justify-between items-start gap-4 pr-6">
             <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider font-mono">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider font-mono truncate max-w-[200px]">
                   Trade #{trade.id}
                 </span>
                 <span
-                  className="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                  className="px-2 py-0.5 rounded text-[10px] font-bold uppercase shadow-sm"
                   style={{
                     background: trade.side === "Long" ? "#d4edda" : "#fde0e0",
                     color: trade.side === "Long" ? "#1a7a5e" : "#c0392b",
@@ -166,11 +168,11 @@ export function TradeDetailDrawer({
                   {trade.side}
                 </span>
               </div>
-              <SheetTitle className="text-xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
+              <SheetTitle className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
                 {trade.symbol}{" "}
-                <span className="text-gray-300 font-light font-sans">|</span>
+                <span className="text-gray-300 dark:text-gray-600 font-light font-sans">|</span>
                 <span style={{ color: isWin ? "#26a69a" : "#ef5350" }}>
-                  {isWin ? "+" : ""}${Math.abs(trade.netPnl).toFixed(2)}
+                  {trade.netPnl >= 0 ? "+" : "-"}${Math.abs(trade.netPnl).toFixed(2)}
                 </span>
               </SheetTitle>
               <p className="text-xs text-gray-400 mt-1">
@@ -180,7 +182,7 @@ export function TradeDetailDrawer({
 
             <div className="text-right flex flex-col items-end">
               <span
-                className="text-xs font-bold px-2 py-1 rounded-lg"
+                className="text-xs font-bold px-2 py-1 rounded-lg shadow-sm"
                 style={{
                   background: trade.rr >= 0 ? "#e6f4ea" : "#fce8e6",
                   color: trade.rr >= 0 ? "#1a7a5e" : "#c0392b",
@@ -202,15 +204,15 @@ export function TradeDetailDrawer({
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col min-h-0"
         >
-          <div className="px-5 pt-2 border-b border-gray-100 bg-gray-50/50 shrink-0">
-            <TabsList className="bg-gray-100/80 p-0.5 h-8 rounded-lg w-full flex">
-              <TabsTrigger value="overview" className="flex-1 py-1">
+          <div className="px-6 pt-3 pb-2 border-b border-gray-100 dark:border-[#1e2030] bg-gray-50/50 dark:bg-[#0f1016] shrink-0">
+            <TabsList className="bg-gray-200/50 dark:bg-[#1e2030] p-1 h-10 rounded-xl w-full flex">
+              <TabsTrigger value="overview" className="flex-1 rounded-lg text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-[#2a2c3e] data-[state=active]:text-gray-900 dark:data-[state=active]:text-white dark:text-gray-400">
                 Overview
               </TabsTrigger>
-              <TabsTrigger value="screenshots" className="flex-1 py-1">
+              <TabsTrigger value="screenshots" className="flex-1 rounded-lg text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-[#2a2c3e] data-[state=active]:text-gray-900 dark:data-[state=active]:text-white dark:text-gray-400">
                 Screenshots ({screenshots.length})
               </TabsTrigger>
-              <TabsTrigger value="psychology" className="flex-1 py-1">
+              <TabsTrigger value="psychology" className="flex-1 rounded-lg text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-[#2a2c3e] data-[state=active]:text-gray-900 dark:data-[state=active]:text-white dark:text-gray-400">
                 Psychology & Rules
               </TabsTrigger>
             </TabsList>
@@ -225,55 +227,27 @@ export function TradeDetailDrawer({
               {/* Execution Details Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="tz-card p-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-                    <DollarSign size={16} className="text-indigo-600" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                      Entry Price
-                    </p>
-                    <p className="text-sm font-bold text-gray-800">
-                      ${trade.entry.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-                <div className="tz-card p-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                    <Percent size={16} className="text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                      Exit Price
-                    </p>
-                    <p className="text-sm font-bold text-gray-800">
-                      {trade.exit
-                        ? `$${trade.exit.toFixed(2)}`
-                        : "Open Position"}
-                    </p>
-                  </div>
-                </div>
-                <div className="tz-card p-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-                    <Clock size={16} className="text-emerald-600" />
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <Hash size={16} className="text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
                       Quantity
                     </p>
-                    <p className="text-sm font-bold text-gray-800">
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100">
                       {trade.qty} shares
                     </p>
                   </div>
                 </div>
                 <div className="tz-card p-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-                    <Calendar size={16} className="text-purple-600" />
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center shrink-0">
+                    <Coins size={16} className="text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
                       Commissions
                     </p>
-                    <p className="text-sm font-bold text-gray-800">
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100">
                       ${trade.commissions.toFixed(2)}
                     </p>
                   </div>
@@ -281,17 +255,17 @@ export function TradeDetailDrawer({
               </div>
 
               {/* Playbook Classification */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
                   <Zap size={13} className="text-indigo-500" /> Playbook
                   Strategy
                 </label>
                 <select
                   value={playbook}
                   onChange={(e) => setPlaybook(e.target.value)}
-                  className="w-full text-xs h-9 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full text-xs h-10 px-3 rounded-lg border border-gray-200 dark:border-[#2a2c3e] bg-white dark:bg-[#12131a] dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
                 >
-                  <option value="">No Strategy Select</option>
+                  <option value="">No Strategy Selected</option>
                   <option value="Breakout">Breakout</option>
                   <option value="VWAP Rejection">VWAP Rejection</option>
                   <option value="Gap & Go">Gap & Go</option>
@@ -302,8 +276,8 @@ export function TradeDetailDrawer({
               </div>
 
               {/* General Trade Notes */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
                   <FileText size={13} className="text-indigo-500" /> General
                   Trade Notes
                 </label>
@@ -311,8 +285,8 @@ export function TradeDetailDrawer({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Analyze execution setup, what went well, what could be improved..."
-                  rows={6}
-                  className="w-full text-xs p-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
+                  rows={8}
+                  className="w-full text-xs p-4 rounded-lg border border-gray-200 dark:border-[#2a2c3e] bg-white dark:bg-[#12131a] dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed transition-colors"
                 />
               </div>
             </TabsContent>
@@ -349,7 +323,7 @@ export function TradeDetailDrawer({
                   screenshots.map((url, i) => (
                     <div
                       key={i}
-                      className="group relative rounded-xl overflow-hidden border border-gray-100 shadow-xs bg-black/5"
+                      className="tz-card group relative rounded-xl overflow-hidden border border-gray-100 shadow-xs bg-white"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img

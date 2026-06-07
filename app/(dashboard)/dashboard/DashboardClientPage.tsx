@@ -6,35 +6,24 @@ import { ZellaScoreCard, CumulativePnLCard, NetDailyPnLCard, PlaybookPerformance
 import { TradeCalendar } from "@/components/dashboard/TradeCalendar";
 import { TradesTable } from "@/components/dashboard/TradesTable";
 import { TradeDetailDrawer } from "@/components/dashboard/TradeDetailDrawer";
-import { Trade, getSavedTrades, saveTrades } from "@/lib/data";
+import { Trade } from "@/lib/data";
+import { useTrades } from "@/components/providers/TradeProvider";
 
 export default function DashboardPage() {
-  const [trades, setTrades] = useState<Trade[]>(() => getSavedTrades());
+  const { trades, updateTrade } = useTrades();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
   // Drawer states
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Keep state synced across navigations / tab changes
-  useEffect(() => {
-    const handleUpdate = () => {
-      setTrades(getSavedTrades());
-    };
-    window.addEventListener("tz_trades_update", handleUpdate);
-    return () => {
-      window.removeEventListener("tz_trades_update", handleUpdate);
-    };
-  }, []);
-
   const handleSelectTrade = (trade: Trade) => {
     setSelectedTrade(trade);
     setIsDrawerOpen(true);
   };
 
-  const handleSaveTrade = (updatedTrade: Trade) => {
-    const updatedList = trades.map((t) => (t.id === updatedTrade.id ? updatedTrade : t));
-    saveTrades(updatedList);
+  const handleSaveTrade = async (updatedTrade: Trade) => {
+    await updateTrade(updatedTrade.id, updatedTrade);
   };
 
   return (

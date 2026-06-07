@@ -25,7 +25,8 @@ import {
   Upload,
   Brain,
 } from "lucide-react";
-import { Trade, getSavedTrades, saveTrades } from "@/lib/data";
+import { Trade } from "@/lib/data";
+import { useTrades } from "@/components/providers/TradeProvider";
 import { toast } from "sonner";
 import { TradeDetailDrawer } from "@/components/dashboard/TradeDetailDrawer";
 import { Button } from "@/components/ui/button";
@@ -91,18 +92,8 @@ export default function JournalPage() {
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"calendar" | "log">("calendar");
 
-  // Trades & Daily Logs State
-  const [trades, setTrades] = useState<Trade[]>(() => getSavedTrades());
-
-  React.useEffect(() => {
-    const handleUpdate = () => {
-      setTrades(getSavedTrades());
-    };
-    window.addEventListener("tz_trades_update", handleUpdate);
-    return () => {
-      window.removeEventListener("tz_trades_update", handleUpdate);
-    };
-  }, []);
+  // Trades State from context
+  const { trades, updateTrade } = useTrades();
 
   const [dailyLogs, setDailyLogs] = useState<Record<string, DailyLog>>(() => {
     if (typeof window !== "undefined") {
@@ -323,9 +314,8 @@ export default function JournalPage() {
   };
 
   // Save Trade details from Drawer
-  const handleSaveTrade = (updatedTrade: Trade) => {
-    const updatedList = trades.map((t) => (t.id === updatedTrade.id ? updatedTrade : t));
-    saveTrades(updatedList);
+  const handleSaveTrade = async (updatedTrade: Trade) => {
+    await updateTrade(updatedTrade.id, updatedTrade);
   };
 
   // Get active selected day check-in log
@@ -418,7 +408,7 @@ export default function JournalPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-5 bg-[#f4f6fb] min-h-full">
+    <div className="tz-page">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -539,8 +529,7 @@ export default function JournalPage() {
           <div className="tz-card overflow-hidden bg-white shrink-0">
             {/* Calendar Controls */}
             <div
-              className="flex items-center justify-between px-4 py-3"
-              style={{ borderBottom: "1px solid #f0f4f8" }}
+              className="flex items-center justify-between px-4 py-3 border-b border-gray-100"
             >
               <div className="flex items-center gap-1">
                 <button
@@ -602,8 +591,7 @@ export default function JournalPage() {
               <div className="flex-1 min-w-0">
                 {/* Day Headers */}
                 <div
-                  className="grid grid-cols-7"
-                  style={{ borderBottom: "1px solid #f0f4f8" }}
+                  className="grid grid-cols-7 border-b border-gray-100"
                 >
                   {DAY_HEADERS.map((d) => (
                     <div
@@ -619,16 +607,12 @@ export default function JournalPage() {
                 {weeks.map((week, wi) => (
                   <div
                     key={wi}
-                    className="grid grid-cols-7"
-                    style={{
-                      borderBottom:
-                        wi < weeks.length - 1 ? "1px solid #f0f4f8" : undefined,
-                    }}
+                    className={`grid grid-cols-7 ${wi < weeks.length - 1 ? "border-b border-gray-100" : ""}`}
                   >
                     {week.map((day, di) => {
                       const d = day ? calendarDayMap[day] : undefined;
                       const cs = d ? getCellStyle(d.pnl) : null;
-                      const isSel = day === selectedDay;
+                      const isSel = day !== null && day === selectedDay;
 
                       // Check if daily note exists in state
                       const cellDateStr = day
@@ -647,11 +631,9 @@ export default function JournalPage() {
                         <div
                           key={di}
                           onClick={() => day && setSelectedDay(day)}
-                          className="relative p-1.5 cursor-pointer transition-all hover:bg-gray-50/50"
+                          className={`relative p-1.5 cursor-pointer transition-all hover:bg-gray-50/50 ${di < 6 ? "border-r border-gray-100" : ""}`}
                           style={{
                             minHeight: "86px",
-                            borderRight:
-                              di < 6 ? "1px solid #f0f4f8" : undefined,
                             background: isSel
                               ? cs
                                 ? cs.bg + "cc"
@@ -707,16 +689,10 @@ export default function JournalPage() {
 
               {/* Weekly Sidebar */}
               <div
-                className="flex-shrink-0 flex flex-col"
-                style={{
-                  width: "95px",
-                  borderLeft: "1px solid #f0f4f8",
-                  background: "#fafbfc",
-                }}
+                className="flex-shrink-0 flex flex-col bg-gray-50 border-l border-gray-100 w-[95px]"
               >
                 <div
-                  className="py-2"
-                  style={{ height: "33px", borderBottom: "1px solid #f0f4f8" }}
+                  className="py-2 h-[33px] border-b border-gray-100"
                 />
                 {weekStats.map((ws, i) => {
                   const color =
@@ -724,14 +700,7 @@ export default function JournalPage() {
                   return (
                     <div
                       key={i}
-                      className="flex flex-col justify-center px-3"
-                      style={{
-                        minHeight: "86px",
-                        borderBottom:
-                          i < weekStats.length - 1
-                            ? "1px solid #f0f4f8"
-                            : undefined,
-                      }}
+                    className={`flex flex-col justify-center px-3 min-h-[86px] ${i < weekStats.length - 1 ? "border-b border-gray-100" : ""}`}
                     >
                       <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
                         Week {i + 1}
@@ -781,12 +750,7 @@ export default function JournalPage() {
               <div className="tz-card overflow-hidden bg-white">
                 <table className="w-full text-[11px] text-gray-600">
                   <thead>
-                    <tr
-                      style={{
-                        background: "#f8fafc",
-                        borderBottom: "1px solid #f0f4f8",
-                      }}
-                    >
+                    <tr className="bg-gray-50 border-b border-gray-100">
                       {[
                         "Time",
                         "Symbol",

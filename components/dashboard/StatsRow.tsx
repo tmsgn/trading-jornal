@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Info, RefreshCw, Pencil, Plus } from "lucide-react";
 import {
   Tooltip,
@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trade } from "@/lib/data";
+import { Trade, getSavedProfile } from "@/lib/data";
 
 interface StatCardProps {
   label: string;
@@ -119,7 +119,7 @@ function ProfitArc({ factor }: { factor: number }) {
         <path
           d="M4,28 A23,23,0,0,1,50,28"
           fill="none"
-          stroke={factor >= 1.5 ? "#26a69a" : factor >= 1.0 ? "#6366f1" : "#ef5350"}
+          stroke={factor >= 1.5 ? "#26a69a" : factor >= 1.0 ? "#10b981" : "#ef5350"}
           strokeWidth="5"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${circ - dash}`}
@@ -182,9 +182,9 @@ export function StatsRow({ trades }: { trades: Trade[] }) {
         extra={
           <div className="mt-2 p-1.5 rounded-md w-7 h-7 flex items-center justify-center border border-gray-200 cursor-pointer hover:bg-gray-50 self-end ml-auto">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect x="1" y="9" width="2.5" height="4" rx="0.5" fill="#6366f1" />
-              <rect x="5" y="6" width="2.5" height="7" rx="0.5" fill="#6366f1" fillOpacity="0.5" />
-              <rect x="9" y="3" width="2.5" height="10" rx="0.5" fill="#6366f1" fillOpacity="0.3" />
+              <rect x="1" y="9" width="2.5" height="4" rx="0.5" fill="#10b981" />
+              <rect x="5" y="6" width="2.5" height="7" rx="0.5" fill="#10b981" fillOpacity="0.5" />
+              <rect x="9" y="3" width="2.5" height="10" rx="0.5" fill="#10b981" fillOpacity="0.3" />
             </svg>
           </div>
         }
@@ -197,7 +197,7 @@ export function StatsRow({ trades }: { trades: Trade[] }) {
         extra={
           <div className="mt-2 p-1.5 rounded-md w-7 h-7 flex items-center justify-center border border-gray-200 cursor-pointer hover:bg-gray-50 self-end ml-auto">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 10 L5 6 L8 8 L13 3" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M1 10 L5 6 L8 8 L13 3" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
         }
@@ -218,17 +218,17 @@ export function StatsRow({ trades }: { trades: Trade[] }) {
       <StatCard 
         label="Win %" 
         value={`${stats.winRate.toFixed(1)}%`}
+        extra={
+          <div className="mt-2 flex items-center gap-2 shrink-0">
+            <span className="tz-badge-win">{stats.winCount}W</span>
+            <span className="tz-badge-loss">{stats.lossCount}L</span>
+          </div>
+        }
       >
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="tz-badge-win">{stats.winCount}W</span>
-          <span className="tz-badge-loss">{stats.lossCount}L</span>
+        <div className="flex items-center select-none">
+          <GaugeMini value={stats.winRate} color="#10b981" bg="#e8ecf4" />
         </div>
       </StatCard>
-      
-      {/* Win % gauge */}
-      <div className="flex items-center -ml-2 select-none">
-        <GaugeMini value={stats.winRate} color="#6366f1" bg="#e8ecf4" />
-      </div>
 
       {/* Avg win/loss */}
       <div className="tz-card flex flex-col justify-between p-4 flex-1 min-w-[170px] bg-white">
@@ -266,6 +266,18 @@ export function StatsRow({ trades }: { trades: Trade[] }) {
 }
 
 export function WelcomeBar({ trades }: { trades: Trade[] }) {
+  const [profile, setProfile] = useState(() => getSavedProfile());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setProfile(getSavedProfile());
+    };
+    window.addEventListener("tz_profile_update", handleUpdate);
+    return () => {
+      window.removeEventListener("tz_profile_update", handleUpdate);
+    };
+  }, []);
+
   const openCount = useMemo(() => {
     return trades.filter((t) => t.status === "Open").length;
   }, [trades]);
@@ -274,9 +286,9 @@ export function WelcomeBar({ trades }: { trades: Trade[] }) {
     <div className="flex items-center justify-between px-5 py-3 shrink-0">
       <div className="flex items-center gap-2">
         <h2 className="text-[15px] font-bold text-gray-800">
-          Good morning Harry! 
+          Good morning {profile.firstName}! 
           {openCount > 0 && (
-            <span className="ml-2 text-xs font-medium text-indigo-500">
+            <span className="ml-2 text-xs font-medium text-emerald-500">
               ({openCount} open {openCount === 1 ? "position" : "positions"} active)
             </span>
           )}
@@ -287,14 +299,14 @@ export function WelcomeBar({ trades }: { trades: Trade[] }) {
           <RefreshCw size={12} />
           Last sync: 2 min ago
         </div>
-        <button className="flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-semibold border border-indigo-300 text-indigo-600 hover:bg-indigo-50 transition-colors">
+        <button className="flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-semibold border border-emerald-300 text-emerald-600 hover:bg-emerald-50 transition-colors">
           <Pencil size={12} />
           Edit Widgets
         </button>
         <button
           className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90 shadow-sm"
           style={{
-            background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+            background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
           }}
         >
           <Plus size={13} />

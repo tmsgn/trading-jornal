@@ -54,8 +54,20 @@ function buildCalendar(year: number, month: number) {
 }
 
 export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalendarProps) {
-  const [year, setYear] = useState(2023);
-  const [month, setMonth] = useState(11); // Default to December (index 11)
+  const [year, setYear] = useState(() => {
+    if (trades.length > 0) {
+      const parts = trades[0].date.split("-");
+      return parseInt(parts[0]);
+    }
+    return new Date().getFullYear();
+  });
+  const [month, setMonth] = useState(() => {
+    if (trades.length > 0) {
+      const parts = trades[0].date.split("-");
+      return parseInt(parts[1]) - 1;
+    }
+    return new Date().getMonth();
+  });
 
   // Memoize calendar grid cells build
   const weeks = useMemo(() => buildCalendar(year, month), [year, month]);
@@ -180,8 +192,8 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
           </button>
           <button
             onClick={() => {
-              setYear(2023);
-              setMonth(11);
+              setYear(new Date().getFullYear());
+              setMonth(new Date().getMonth());
               onSelectDate(null);
             }}
             className="ml-2 px-3 py-1 rounded-full text-[10px] font-bold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"

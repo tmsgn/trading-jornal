@@ -20,8 +20,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Playbook, getSavedPlaybooks, savePlaybooks } from "@/lib/data";
+import { Playbook } from "@/lib/data";
 import { toast } from "sonner";
+import { getPlaybooksAction, createPlaybookAction, updatePlaybookAction } from "@/app/actions/playbooks";
 
 const COLOR_OPTIONS = [
   "#6366f1", // indigo
@@ -354,74 +355,77 @@ function CreatePlaybookModal({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PlaybooksPage() {
-  const [playbooks, setPlaybooks] = useState<Playbook[]>(() => getSavedPlaybooks());
+  const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
   const [activeTab, setActiveTab] = useState<"All" | "Active" | "Archived">("All");
   const [showCreate, setShowCreate] = useState(false);
   const [playbookToEdit, setPlaybookToEdit] = useState<Playbook | null>(null);
 
   // Sync state across navigations
   useEffect(() => {
-    const handleUpdate = () => {
-      setPlaybooks(getSavedPlaybooks());
-    };
-    window.addEventListener("tz_playbooks_update", handleUpdate);
-    return () => {
-      window.removeEventListener("tz_playbooks_update", handleUpdate);
-    };
+    getPlaybooksAction().then((data) => {
+      setPlaybooks(data as any);
+    });
   }, []);
 
-  const handleCreateOrEditPlaybook = (playbookData: Partial<Playbook>) => {
-    if (playbookToEdit) {
-      // Edit mode
-      const updated = playbooks.map((p) => {
-        if (p.id === playbookToEdit.id) {
-          return {
-            ...p,
-            ...playbookData,
-          };
-        }
-        return p;
-      });
-      savePlaybooks(updated);
-      toast.success(`Playbook "${playbookData.name}" updated successfully!`);
-    } else {
-      // Create mode
-      const newPlaybook: Playbook = {
-        id: Date.now(),
-        name: playbookData.name || "Strategy",
-        description: playbookData.description || "",
-        color: playbookData.color || COLOR_OPTIONS[0],
-        active: true,
-        winRate: 0,
-        totalPnl: 0,
-        trades: 0,
-        avgRR: 0,
-        equity: [0],
-      };
-      const updated = [...playbooks, newPlaybook];
-      savePlaybooks(updated);
-      toast.success(`Playbook "${playbookData.name}" created successfully!`);
+  const handleCreateOrEditPlaybook = async (playbookData: Partial<Playbook>) => {
+    try {
+      if (playbookToEdit) {
+        // Edit mode
+        const updatedResponse = await updatePlaybookAction(String(playbookToEdit.id), {
+          name: playbookData.name,
+          description: playbookData.description,
+          color: playbookData.color,
+        });
+        
+        setPlaybooks((prev) => prev.map((p) => {
+          if (p.id === playbookToEdit.id) {
+            return { ...p, ...updatedResponse };
+          }
+          return p;
+        }));
+        
+        toast.success(`Playbook "${playbookData.name}" updated successfully!`);
+      } else {
+        // Create mode
+        const newPlaybook = await createPlaybookAction({
+          name: playbookData.name || "Strategy",
+          description: playbookData.description || "",
+          color: playbookData.color || COLOR_OPTIONS[0],
+        });
+        
+        setPlaybooks((prev) => [newPlaybook as any, ...prev]);
+        toast.success(`Playbook "${playbookData.name}" created successfully!`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save playbook");
+    } finally {
+      setPlaybookToEdit(null);
     }
-    setPlaybookToEdit(null);
   };
 
-  const handleToggleArchive = (id: number) => {
-    const updated = playbooks.map((p) => {
-      if (p.id === id) {
-        const nextActive = !p.active;
-        if (nextActive) {
-          toast.success(`Playbook "${p.name}" restored to active!`);
-        } else {
-          toast.info(`Playbook "${p.name}" archived successfully.`);
+  const handleToggleArchive = async (id: number) => {
+    try {
+      const pb = playbooks.find(p => p.id === id);
+      if (!pb) return;
+      const nextActive = !pb.active;
+      
+      await updatePlaybookAction(String(id), { active: nextActive });
+      
+      setPlaybooks((prev) => prev.map((p) => {
+        if (p.id === id) {
+          return { ...p, active: nextActive };
         }
-        return {
-          ...p,
-          active: nextActive,
-        };
+        return p;
+      }));
+      
+      if (nextActive) {
+        toast.success(`Playbook "${pb.name}" restored to active!`);
+      } else {
+        toast.info(`Playbook "${pb.name}" archived successfully.`);
       }
-      return p;
-    });
-    savePlaybooks(updated);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to archive playbook");
+    }
   };
 
   const handleEditClick = (pb: Playbook) => {
@@ -487,10 +491,7 @@ export default function PlaybooksPage() {
   const tabs: Array<"All" | "Active" | "Archived"> = ["All", "Active", "Archived"];
 
   return (
-    <div
-      className="flex flex-col gap-4 p-5"
-      style={{ background: "#f4f6fb", minHeight: "100%" }}
-    >
+    <div className="tz-page">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
