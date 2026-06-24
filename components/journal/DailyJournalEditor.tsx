@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { RichTextEditor } from "./RichTextEditor";
 import type { Trade } from "@/lib/data";
 import { getDailyJournalsAction, updateDailyJournalAction, type DailyLog } from "@/app/actions/journal";
+import { getPlaybooksAction } from "@/app/actions/playbooks";
 
 interface DailyJournalEditorProps {
   date: string; // YYYY-MM-DD
@@ -28,6 +29,7 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [activeTab, setActiveTab] = useState<"pre" | "main" | "post">("main");
+  const [playbooks, setPlaybooks] = useState<{ id: string; name: string }[]>([]);
 
   // Format date
   const dateObj = new Date(date + "T00:00:00");
@@ -47,6 +49,11 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
+
+    getPlaybooksAction().then((data) => {
+      if (isMounted) setPlaybooks(data);
+    });
+
     getDailyJournalsAction()
       .then((data) => {
         if (!isMounted) return;
@@ -178,6 +185,25 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
           </h3>
 
           <div className="space-y-6">
+            {/* Playbook */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-[var(--tz-text-muted)] uppercase tracking-wider flex items-center justify-between">
+                <span>Playbook</span>
+              </label>
+              <select
+                value={journal.playbook || ""}
+                onChange={(e) => handleContentChange("playbook" as keyof DailyLog, e.target.value)}
+                className="w-full h-9 px-2 rounded-lg border border-[var(--tz-border-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--tz-accent)] bg-[var(--tz-bg-card)] text-[var(--tz-text-primary)] text-xs font-semibold"
+              >
+                <option value="">None</option>
+                {playbooks.map((pb) => (
+                  <option key={pb.id} value={pb.name}>
+                    {pb.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Rating */}
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-[var(--tz-text-muted)] uppercase tracking-wider flex items-center justify-between">
@@ -239,6 +265,43 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
                 <span>Poor</span>
                 <span>Perfect</span>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-xs font-bold text-[var(--tz-text-primary)] uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Activity size={14} className="text-[var(--tz-text-muted)]" />
+              Today's Trades
+            </h3>
+            <div className="space-y-3">
+              {trades.length === 0 ? (
+                <p className="text-xs text-[var(--tz-text-muted)] italic">No trades today.</p>
+              ) : (
+                trades.map((t) => (
+                  <div key={t.id} className="p-3 bg-[var(--tz-bg-card)] rounded-lg border border-[var(--tz-border-subtle)] shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold text-[var(--tz-text-primary)]">{t.symbol} <span className={t.side === "Long" ? "text-emerald-500" : "text-red-500"}>{t.side}</span></span>
+                      <span className={`text-xs font-bold ${t.netPnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                        {t.netPnl >= 0 ? "+" : ""}${Math.abs(t.netPnl).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-[var(--tz-text-muted)] mb-1">
+                      <Clock size={10} />
+                      <span>{t.time}</span>
+                      {t.entryTimeFrame && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-[var(--tz-border)]" />
+                          <span>{t.entryTimeFrame} TF</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex justify-between text-[10px] text-[var(--tz-text-secondary)]">
+                      <span>In: ${t.entry.toFixed(2)}</span>
+                      <span>Out: {t.exit ? `$${t.exit.toFixed(2)}` : "Open"}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

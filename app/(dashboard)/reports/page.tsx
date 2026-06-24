@@ -33,6 +33,8 @@ import {
 import { useTrades } from "@/components/providers/TradeProvider";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Trade } from "@/lib/data";
+import { getDailyJournalsAction, type DailyLog } from "@/app/actions/journal";
+import { useEffect } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Period = "this-week" | "last-week" | "this-month" | "last-month" | "custom";
@@ -191,6 +193,11 @@ export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>("this-week");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+  const [journals, setJournals] = useState<Record<string, DailyLog>>({});
+
+  useEffect(() => {
+    getDailyJournalsAction().then((data) => setJournals(data));
+  }, []);
 
   const [rangeStart, rangeEnd] = getDateRange(period, customStart, customEnd);
 
@@ -280,6 +287,38 @@ export default function ReportsPage() {
       }))
       .sort((a, b) => b.count - a.count);
 
+    // By Side (Long vs Short)
+    const longTrades = list.filter(t => t.side === "Long");
+    const shortTrades = list.filter(t => t.side === "Short");
+    const bySide = [
+      {
+        side: "Long",
+        pnl: parseFloat(longTrades.reduce((s, t) => s + t.netPnl, 0).toFixed(2)),
+        count: longTrades.length,
+      },
+      {
+        side: "Short",
+        pnl: parseFloat(shortTrades.reduce((s, t) => s + t.netPnl, 0).toFixed(2)),
+        count: shortTrades.length,
+      }
+    ].filter(x => x.count > 0);
+
+    // By Day of Week
+    const dowMap: Record<number, { pnl: number; count: number }> = {};
+    for (let i = 0; i < 7; i++) dowMap[i] = { pnl: 0, count: 0 };
+    for (const t of list) {
+      const d = new Date(t.date + "T00:00:00").getDay();
+      dowMap[d].pnl += t.netPnl;
+      dowMap[d].count++;
+    }
+    const byDayOfWeek = Object.entries(dowMap)
+      .map(([d, data]) => ({
+        day: DAY_NAMES[parseInt(d)],
+        pnl: parseFloat(data.pnl.toFixed(2)),
+        count: data.count,
+      }))
+      .filter(x => x.count > 0);
+
     // Discipline score
     const consistencyScore = list.length > 0 ? Math.min(100, list.length * 8) : 0;
     const rrScore = Math.min(100, Math.max(0, avgRR * 35));
@@ -354,20 +393,21 @@ export default function ReportsPage() {
     }
 
     const tradingDays = Object.keys(dayMap).length;
+    const journaledDays = Object.keys(dayMap).filter(d => !!journals[d]).length;
 
     return {
       totalPnl, winRate, avgRR, profitFactor, totalTrades: list.length,
       wins: wins.length, losses: losses.length,
       equityCurve, dailyPnl,
       bestTrades, worstTrades,
-      byPlaybook, bySymbol,
+      byPlaybook, bySymbol, bySide, byDayOfWeek,
       disciplineScore,
       insights,
       currentStreak, currentStreakType,
       bestWinStreak, bestLossStreak,
-      tradingDays,
+      tradingDays, journaledDays,
     };
-  }, [filteredTrades, period]);
+  }, [filteredTrades, period, journals]);
 
   // Win-rate donut data
   const donutData = [
@@ -621,8 +661,8 @@ export default function ReportsPage() {
             </ResponsiveContainer>
           </motion.div>
 
-          {/* ── Performance Breakdown (3 columns) ────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* ── Performance Breakdown (4 columns) ────────────────────── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Best & Worst Trades */}
             <motion.div
               className="tz-card p-5 bg-[var(--tz-bg-card)]"
@@ -748,8 +788,70 @@ export default function ReportsPage() {
                 )}
               </div>
             </motion.div>
-          </div>
 
+          {/* Trade Distribution (Side & Day) */}
+          <motion.div
+            className="tz-card p-5 bg-[var(--tz-bg-card)]"
+            initial="hidden" animate="visible" custom={9.5} variants={fadeUp}
+          >
+            <h2 className="text-sm font-semibold text-[var(--tz-text-primary)] mb-3 flex items-center gap-2">
+              <Target size={14} className="text-pink-500" /> Distribution
+            </h2>
+            
+            <p className="text-[10px] uppercase tracking-wider text-[var(--tz-text-muted)] font-semibold mb-2">Long vs Short</p>
+            <div className="space-y-2 mb-4">
+              {stats.bySide.map((side) => {
+                const maxCount = Math.max(...stats.bySide.map((s) => s.count), 1);
+                return (
+                  <div key={side.side} className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-[var(--tz-text-secondary)] w-12">{side.side}</span>
+                    <div className="flex-1 h-2 rounded-full bg-[var(--tz-border-subtle)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${(side.count / maxCount) * 100}%`,
+                          background: side.side === "Long" ? "#10b981" : "#ef5350",
+                        }}
+                      />
+                    </div>
+                    <div className="text-right w-20">
+                      <span
+                        className="text-xs font-bold"
+                        style={{ color: side.pnl >= 0 ? "#10b981" : "#ef5350" }}
+                      >
+                        {fmt(side.pnl)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-[10px] uppercase tracking-wider text-[var(--tz-text-muted)] font-semibold mb-2">By Day of Week</p>
+            <div className="space-y-2">
+              {stats.byDayOfWeek.map((dow) => {
+                const maxCount = Math.max(...stats.byDayOfWeek.map((s) => s.count), 1);
+                return (
+                  <div key={dow.day} className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-[var(--tz-text-secondary)] w-10">{dow.day}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-[var(--tz-border-subtle)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${(dow.count / maxCount) * 100}%`,
+                          background: dow.pnl >= 0 ? "linear-gradient(90deg, #10b981, #34d399)" : "linear-gradient(90deg, #ef5350, #fca5a5)",
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold w-16 text-right" style={{ color: dow.pnl >= 0 ? "#10b981" : "#ef5350" }}>
+                      {fmt(dow.pnl)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </div>
           {/* ── Discipline Score + Key Insights + Streak Tracker ──────── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Discipline Score */}
@@ -882,6 +984,26 @@ export default function ReportsPage() {
                       style={{
                         width: `${Math.min(100, (stats.tradingDays / 7) * 100)}%`,
                         background: "linear-gradient(90deg, #6366f1, #10b981)",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Journaling Consistency */}
+                <div className="p-3 rounded-xl bg-[var(--tz-hover-bg)]">
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--tz-text-muted)] font-semibold mb-1">Journaling Consistency</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg font-black text-[var(--tz-text-primary)]">
+                      {stats.tradingDays > 0 ? Math.round((stats.journaledDays / stats.tradingDays) * 100) : 0}%
+                    </span>
+                    <span className="text-xs text-[var(--tz-text-muted)]">of trade days journaled</span>
+                  </div>
+                  <div className="mt-2 h-1.5 rounded-full bg-[var(--tz-border-subtle)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${stats.tradingDays > 0 ? (stats.journaledDays / stats.tradingDays) * 100 : 0}%`,
+                        background: "linear-gradient(90deg, #10b981, #34d399)",
                       }}
                     />
                   </div>

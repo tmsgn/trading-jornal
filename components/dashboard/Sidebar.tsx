@@ -57,7 +57,7 @@ export function Sidebar() {
   const [formNetPnl, setFormNetPnl] = useState<string>("");
   const [formTags, setFormTags] = useState("");
   const [formAccountId, setFormAccountId] = useState<string>("");
-
+  const [formPlaybookId, setFormPlaybookId] = useState<string>("");
 
   const [playbooks, setPlaybooks] = useState<{ id: string; name: string }[]>(
     [],
@@ -94,6 +94,7 @@ export function Sidebar() {
     setFormRR("");
     setFormNetPnl("");
     setFormTags("");
+    setFormPlaybookId("");
   };
 
 
@@ -171,7 +172,7 @@ export function Sidebar() {
         netPnl: netPnl,
         rr: parsedRr,
         duration: 0,
-        playbookId: null,
+        playbookId: formPlaybookId || null,
         accountId: formAccountId || activeAccountId || undefined,
         initialRisk: 0,
         entryTimeFrame: formEntryTimeFrame,
@@ -193,6 +194,7 @@ export function Sidebar() {
       setFormRR("");
       setFormNetPnl("");
       setFormTags("");
+      setFormPlaybookId("");
       setIsAddModalOpen(false);
 
       toast.success(`Trade for ${newTrade.symbol} added successfully!`);
@@ -676,7 +678,26 @@ export function Sidebar() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Playbook */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Playbook
+                  </label>
+                  <select
+                    value={formPlaybookId}
+                    onChange={(e) => setFormPlaybookId(e.target.value)}
+                    className="w-full h-9 px-2 rounded-lg border border-gray-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white dark:bg-white/5 dark:text-white text-xs font-semibold"
+                  >
+                    <option value="">No Playbook</option>
+                    {playbooks.map((pb) => (
+                      <option key={pb.id} value={pb.id}>
+                        {pb.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Tags */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">

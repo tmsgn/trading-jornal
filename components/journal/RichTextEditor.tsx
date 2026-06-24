@@ -2,7 +2,7 @@
 
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
+import ImageResize from "tiptap-extension-resize-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
@@ -238,10 +238,29 @@ export function RichTextEditor({
         heading: { levels: [1, 2, 3] },
       }),
       Underline,
-      Image.configure({
+      ImageResize.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            style: {
+              default: null,
+              parseHTML: element => element.getAttribute('style'),
+              renderHTML: attributes => {
+                if (!attributes.style) {
+                  return {}
+                }
+                return {
+                  style: attributes.style
+                }
+              }
+            }
+          }
+        }
+      }).configure({
         allowBase64: true,
+        inline: true,
         HTMLAttributes: {
-          class: "rounded-lg max-w-full h-auto my-2",
+          class: "rounded-lg my-2",
         },
       }),
       Link.configure({

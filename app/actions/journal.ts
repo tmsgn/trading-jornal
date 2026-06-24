@@ -120,6 +120,7 @@ export async function updateDailyJournalAction(
         confidence: payload.confidence ?? 3,
         discipline: payload.discipline ?? 3,
         rating: payload.rating ?? 0,
+        playbook: payload.playbook ?? "",
       })
       .select()
       .single();

@@ -91,9 +91,9 @@ export function TradeProvider({ children }: { children: React.ReactNode }) {
     id: string | number,
     updatedFields: Partial<Trade>,
   ) => {
-    await updateTradeAction(String(id), updatedFields);
+    const updatedTrade = await updateTradeAction(String(id), updatedFields);
     setTrades((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updatedFields } : t)),
+      prev.map((t) => (t.id === id ? updatedTrade : t)),
     );
   };
 

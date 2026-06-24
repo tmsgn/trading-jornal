@@ -150,14 +150,14 @@ export function StatsRow({ trades }: { trades: Trade[] }) {
     if (grossLoss > 0) {
       profitFactor = grossProfit / grossLoss;
     } else if (grossProfit > 0) {
-      profitFactor = 9.99; // Cap at high indicator
+      profitFactor = Infinity; // Infinite profit factor
     }
 
     const winRate = closed.length > 0 ? (wins.length / closed.length) * 100 : 0;
 
     const avgWin = wins.length > 0 ? grossProfit / wins.length : 0;
     const avgLoss = losses.length > 0 ? grossLoss / losses.length : 0;
-    const ratio = avgLoss > 0 ? avgWin / avgLoss : 0;
+    const ratio = avgLoss > 0 ? avgWin / avgLoss : (avgWin > 0 ? Infinity : 0);
 
     return {
       totalCount: closed.length,
@@ -245,7 +245,7 @@ export function StatsRow({ trades }: { trades: Trade[] }) {
       {/* Profit Factor */}
       <StatCard
         label="Profit Factor"
-        value={stats.profitFactor.toFixed(2)}
+        value={stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)}
         extra={
           <div className="mt-1">
             <ProfitArc factor={stats.profitFactor} />
@@ -278,7 +278,7 @@ export function StatsRow({ trades }: { trades: Trade[] }) {
           <Info size={12} className="text-[var(--tz-text-muted)]" />
         </div>
         <div className="text-lg font-bold text-[var(--tz-text-primary)] mt-1">
-          {stats.ratio.toFixed(2)}
+          {stats.ratio === Infinity ? "∞" : stats.ratio.toFixed(2)}
         </div>
         <div className="flex gap-1 mt-2 shrink-0">
           <div

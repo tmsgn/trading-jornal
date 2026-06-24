@@ -58,11 +58,12 @@ export function TradeJournalPanel({
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      const pbId = playbook ? (playbooks.find((p) => p.name === playbook)?.id || trade.playbookId) : null;
       await onSave({
         ...trade,
         notes,
-        playbook,
-        playbookId: playbooks.find((p) => p.name === playbook)?.id || trade.playbookId,
+        playbook: playbook || "None",
+        playbookId: pbId,
         hasNote: !!notes && notes !== "<p></p>",
       });
       setIsDirty(false);
