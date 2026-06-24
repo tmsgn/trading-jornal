@@ -1,8 +1,5 @@
 import "@/app/globals.css";
-import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "ApexTrade | Professional Trading Journal",
@@ -18,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className={`min-h-full flex ${inter.className} layout-comfortable`}>
+      <body className="min-h-full flex font-sans layout-comfortable">
         <AppearanceProvider>
           {children}
           <Toaster position="top-center" richColors />

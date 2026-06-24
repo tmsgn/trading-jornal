@@ -38,6 +38,7 @@ export interface Trade {
   tags: string[];
   hasNote: boolean;
   status: TradeStatus;
+  outcome?: "Win" | "Loss" | "BE" | null;
   accountId?: string;
   winRate?: number;
   screenshots?: string[];

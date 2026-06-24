@@ -58,6 +58,7 @@ export function Sidebar() {
   const [formTags, setFormTags] = useState("");
   const [formAccountId, setFormAccountId] = useState<string>("");
   const [formPlaybookId, setFormPlaybookId] = useState<string>("");
+  const [formOutcome, setFormOutcome] = useState<"Win" | "Loss" | "BE">("Win");
 
   const [playbooks, setPlaybooks] = useState<{ id: string; name: string }[]>(
     [],
@@ -95,6 +96,7 @@ export function Sidebar() {
     setFormNetPnl("");
     setFormTags("");
     setFormPlaybookId("");
+    setFormOutcome("Win");
   };
 
 
@@ -182,6 +184,7 @@ export function Sidebar() {
           .filter(Boolean),
         hasNote: false,
         status: "Closed" as const,
+        outcome: formOutcome,
       };
 
       await addTrade(newTrade as any);
@@ -195,6 +198,7 @@ export function Sidebar() {
       setFormNetPnl("");
       setFormTags("");
       setFormPlaybookId("");
+      setFormOutcome("Win");
       setIsAddModalOpen(false);
 
       toast.success(`Trade for ${newTrade.symbol} added successfully!`);
@@ -645,7 +649,7 @@ export function Sidebar() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 {/* R:R */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -672,9 +676,59 @@ export function Sidebar() {
                     required
                     placeholder="e.g. 500"
                     value={formNetPnl}
-                    onChange={(e) => setFormNetPnl(e.target.value)}
+                    onChange={(e) => {
+                      setFormNetPnl(e.target.value);
+                      const num = parseFloat(e.target.value);
+                      if (!isNaN(num)) {
+                        if (num > 0) setFormOutcome("Win");
+                        else if (num < 0) setFormOutcome("Loss");
+                        else setFormOutcome("BE");
+                      }
+                    }}
                     className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
                   />
+                </div>
+
+                {/* Outcome */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Outcome
+                  </label>
+                  <div className="flex bg-gray-100 dark:bg-white/5 p-0.5 rounded-lg border border-gray-200/50 dark:border-white/10 h-9">
+                    <button
+                      type="button"
+                      onClick={() => setFormOutcome("Win")}
+                      className={`flex-1 rounded-md text-[10px] font-bold transition-all ${
+                        formOutcome === "Win"
+                          ? "bg-white dark:bg-white/10 text-emerald-700 dark:text-emerald-400 shadow-sm border border-gray-200/20 dark:border-white/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Win
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormOutcome("Loss")}
+                      className={`flex-1 rounded-md text-[10px] font-bold transition-all ${
+                        formOutcome === "Loss"
+                          ? "bg-white dark:bg-white/10 text-rose-700 dark:text-rose-400 shadow-sm border border-gray-200/20 dark:border-white/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Loss
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormOutcome("BE")}
+                      className={`flex-1 rounded-md text-[10px] font-bold transition-all ${
+                        formOutcome === "BE"
+                          ? "bg-white dark:bg-white/10 text-amber-700 dark:text-amber-400 shadow-sm border border-gray-200/20 dark:border-white/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                      }`}
+                    >
+                      BE
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -7,17 +7,19 @@ export function safeMath(value: number): number {
 export function calculateWinRate(trades: Trade[]): number {
   const closed = trades.filter((t) => t.status === "Closed");
   if (closed.length === 0) return 0;
-  const wins = closed.filter((t) => t.netPnl > 0);
+  const wins = closed.filter((t) => t.outcome === "Win" || (!t.outcome && t.netPnl > 0));
   return safeMath((wins.length / closed.length) * 100);
 }
 
 export function calculateProfitFactor(trades: Trade[]): number {
   const closed = trades.filter((t) => t.status === "Closed");
   const grossProfit = closed
-    .filter((t) => t.netPnl > 0)
+    .filter((t) => t.outcome === "Win" || (!t.outcome && t.netPnl > 0))
     .reduce((sum, t) => sum + t.netPnl, 0);
   const grossLoss = Math.abs(
-    closed.filter((t) => t.netPnl < 0).reduce((sum, t) => sum + t.netPnl, 0),
+    closed
+      .filter((t) => t.outcome === "Loss" || (!t.outcome && t.netPnl < 0))
+      .reduce((sum, t) => sum + t.netPnl, 0),
   );
 
   if (grossLoss === 0) return grossProfit > 0 ? Number.MAX_SAFE_INTEGER : 0;
@@ -74,10 +76,12 @@ export function calculateMaxDrawdown(trades: Trade[]): {
 }
 
 export function calculateExpectancy(trades: Trade[]): number {
-  const winRate = calculateWinRate(trades) / 100;
   const closed = trades.filter((t) => t.status === "Closed");
-  const wins = closed.filter((t) => t.netPnl > 0);
-  const losses = closed.filter((t) => t.netPnl < 0);
+  if (closed.length === 0) return 0;
+  const wins = closed.filter((t) => t.outcome === "Win" || (!t.outcome && t.netPnl > 0));
+  const losses = closed.filter((t) => t.outcome === "Loss" || (!t.outcome && t.netPnl < 0));
+
+  const winRate = wins.length / closed.length;
 
   const avgWin =
     wins.length > 0

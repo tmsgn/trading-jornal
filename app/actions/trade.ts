@@ -29,6 +29,7 @@ function mapRowToTrade(row: any): Trade {
     takeProfit: row.take_profit ? Number(row.take_profit) : undefined,
     initialRr: row.initial_rr ? Number(row.initial_rr) : undefined,
     entryTimeFrame: row.entry_time_frame || undefined,
+    outcome: row.outcome as "Win" | "Loss" | "BE" | null,
   };
 }
 
@@ -106,6 +107,7 @@ export async function addTradeAction(tradeData: Omit<Trade, "id">) {
       notes: tradeData.notes,
       screenshots: tradeData.screenshots,
       entry_time_frame: tradeData.entryTimeFrame,
+      outcome: tradeData.outcome,
     })
     .select("*, playbooks(name)")
     .single();
@@ -154,6 +156,7 @@ export async function updateTradeAction(
   if (tradeData.notes !== undefined) updatePayload.notes = tradeData.notes;
   if (tradeData.screenshots !== undefined) updatePayload.screenshots = tradeData.screenshots;
   if (tradeData.entryTimeFrame !== undefined) updatePayload.entry_time_frame = tradeData.entryTimeFrame;
+  if (tradeData.outcome !== undefined) updatePayload.outcome = tradeData.outcome;
 
   const { data, error } = await supabase
     .from("trades")
@@ -176,6 +179,28 @@ export async function deleteTradeAction(id: string | number) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
+
+  // Get the trade's date to delete corresponding journal
+  const { data: trade, error: fetchError } = await supabase
+    .from("trades")
+    .select("date")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !trade) {
+    console.error("Error fetching trade for journal deletion:", fetchError);
+  } else {
+    // Delete the daily journal entry for that date and user
+    const { error: journalErr } = await supabase
+      .from("daily_journals")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("date", trade.date);
+      
+    if (journalErr) {
+      console.error("Error deleting daily journal for trade date:", journalErr);
+    }
+  }
 
   const { error } = await supabase.from("trades").delete().eq("id", id);
 

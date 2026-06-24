@@ -98,6 +98,7 @@ export default function TradesPage() {
   const [editTags, setEditTags] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editAccountId, setEditAccountId] = useState("");
+  const [editOutcome, setEditOutcome] = useState<"Win" | "Loss" | "BE">("Win");
   const [isSaving, setIsSaving] = useState(false);
 
   // Sync edit form states when selectedTrade changes
@@ -117,6 +118,7 @@ export default function TradesPage() {
       setEditTags(selectedTrade.tags ? selectedTrade.tags.join(", ") : "");
       setEditNotes(selectedTrade.notes || "");
       setEditAccountId(selectedTrade.accountId || "");
+      setEditOutcome(selectedTrade.outcome || (selectedTrade.netPnl > 0 ? "Win" : selectedTrade.netPnl < 0 ? "Loss" : "BE"));
     }
   }, [selectedTrade]);
 
@@ -180,9 +182,10 @@ export default function TradesPage() {
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
-        notes: editNotes,
-        hasNote: !!editNotes && editNotes !== "<p></p>",
+        notes: selectedTrade.notes || "",
+        hasNote: selectedTrade.hasNote || false,
         accountId: editAccountId || undefined,
+        outcome: editOutcome,
       };
 
       await updateTrade(selectedTrade.id, updatedTrade);
@@ -977,7 +980,7 @@ export default function TradesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 {/* R:R */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -1004,9 +1007,59 @@ export default function TradesPage() {
                     required
                     placeholder="e.g. 500"
                     value={editNetPnl}
-                    onChange={(e) => setEditNetPnl(e.target.value)}
+                    onChange={(e) => {
+                      setEditNetPnl(e.target.value);
+                      const num = parseFloat(e.target.value);
+                      if (!isNaN(num)) {
+                        if (num > 0) setEditOutcome("Win");
+                        else if (num < 0) setEditOutcome("Loss");
+                        else setEditOutcome("BE");
+                      }
+                    }}
                     className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
                   />
+                </div>
+
+                {/* Outcome */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Outcome
+                  </label>
+                  <div className="flex bg-gray-100 dark:bg-white/5 p-0.5 rounded-lg border border-gray-200/50 dark:border-white/10 h-9">
+                    <button
+                      type="button"
+                      onClick={() => setEditOutcome("Win")}
+                      className={`flex-1 rounded-md text-[10px] font-bold transition-all ${
+                        editOutcome === "Win"
+                          ? "bg-white dark:bg-white/10 text-emerald-700 dark:text-emerald-400 shadow-sm border border-gray-200/20 dark:border-white/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Win
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditOutcome("Loss")}
+                      className={`flex-1 rounded-md text-[10px] font-bold transition-all ${
+                        editOutcome === "Loss"
+                          ? "bg-white dark:bg-white/10 text-rose-700 dark:text-rose-400 shadow-sm border border-gray-200/20 dark:border-white/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Loss
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditOutcome("BE")}
+                      className={`flex-1 rounded-md text-[10px] font-bold transition-all ${
+                        editOutcome === "BE"
+                          ? "bg-white dark:bg-white/10 text-amber-700 dark:text-amber-400 shadow-sm border border-gray-200/20 dark:border-white/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                      }`}
+                    >
+                      BE
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1045,19 +1098,7 @@ export default function TradesPage() {
                 </div>
               </div>
 
-              {/* Notes */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Notes
-                </label>
-                <textarea
-                  placeholder="Notes about this trade..."
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  rows={3}
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-medium resize-y"
-                />
-              </div>
+
 
               {/* Modal Actions */}
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100 dark:border-[var(--tz-border-subtle)]">

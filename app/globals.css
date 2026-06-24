@@ -57,6 +57,10 @@
    Clean, professional white — the default experience.
    ═══════════════════════════════════════════════════════════════════════════════ */
 :root {
+  /* ── Font variables ───────────────────────────────────────────────────── */
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
   /* ── shadcn design tokens ─────────────────────────────────────────────── */
   --background: #f8f9fb;
   --foreground: #111827;
