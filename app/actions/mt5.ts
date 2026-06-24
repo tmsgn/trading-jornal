@@ -58,7 +58,6 @@ export async function connectMt5AccountAction(
           server: server,
           platform: "mt5",
           magic: 0,
-          quoteDelay: 0,
           reliability: "high",
         }),
       });
