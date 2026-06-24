@@ -1,12 +1,14 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/server";
 
 export async function checkOnboardingStatus() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return false;
 
   const { data } = await supabase
@@ -40,7 +42,9 @@ export async function getTradingAccounts() {
 
 export async function completeOnboardingAction(formData: FormData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
   const accountName = formData.get("accountName") as string;
@@ -48,12 +52,14 @@ export async function completeOnboardingAction(formData: FormData) {
   const tradingStyle = formData.get("tradingStyle") as string;
 
   // 1. Create trading account
-  const { error: accountError } = await supabase.from("trading_accounts").insert({
-    user_id: user.id,
-    name: accountName,
-    starting_balance: startingBalance,
-    current_balance: startingBalance,
-  });
+  const { error: accountError } = await supabase
+    .from("trading_accounts")
+    .insert({
+      user_id: user.id,
+      name: accountName,
+      starting_balance: startingBalance,
+      current_balance: startingBalance,
+    });
 
   if (accountError) throw new Error(accountError.message);
 
@@ -74,18 +80,24 @@ export async function completeOnboardingAction(formData: FormData) {
 
 export async function addAccountAction(name: string, startingBalance: number) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
-  const { data, error } = await supabase.from("trading_accounts").insert({
-    user_id: user.id,
-    name,
-    starting_balance: startingBalance,
-    current_balance: startingBalance,
-  }).select().single();
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .insert({
+      user_id: user.id,
+      name,
+      starting_balance: startingBalance,
+      current_balance: startingBalance,
+    })
+    .select()
+    .single();
 
   if (error) throw new Error(error.message);
-  
+
   return {
     id: data.id,
     name: data.name,
@@ -96,19 +108,31 @@ export async function addAccountAction(name: string, startingBalance: number) {
 
 export async function deleteAccountAction(id: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
-  const { error } = await supabase.from("trading_accounts").delete().eq("id", id).eq("user_id", user.id);
+  const { error } = await supabase
+    .from("trading_accounts")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
   if (error) throw new Error(error.message);
 
   // Check if they have any accounts left. If 0, force them back to onboarding
-  const { count } = await supabase.from("trading_accounts").select("*", { count: 'exact', head: true }).eq("user_id", user.id);
-  
+  const { count } = await supabase
+    .from("trading_accounts")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
   if (count === 0) {
-    await supabase.from("profiles").update({ onboarding_complete: false }).eq("id", user.id);
+    await supabase
+      .from("profiles")
+      .update({ onboarding_complete: false })
+      .eq("id", user.id);
     return { redirected: true };
   }
-  
+
   return { redirected: false };
 }

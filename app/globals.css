@@ -4,6 +4,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   THEME INLINE — Tailwind CSS v4 bridge
+   Maps CSS custom properties → Tailwind utilities.
+   ───────────────────────────────────────────────────────────────────────────── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -48,97 +52,229 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   LIGHT THEME (DEFAULT)
+   Clean, professional white — the default experience.
+   ═══════════════════════════════════════════════════════════════════════════════ */
 :root {
-  --background: oklch(0.978 0.003 247);
-  --foreground: oklch(0.22 0.01 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.01 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.01 250);
-  --primary: oklch(0.52 0.22 265);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.94 0.01 250);
-  --secondary-foreground: oklch(0.35 0.01 250);
-  --muted: oklch(0.94 0.01 250);
-  --muted-foreground: oklch(0.55 0.01 250);
-  --accent: oklch(0.94 0.01 250);
-  --accent-foreground: oklch(0.22 0.01 250);
-  --destructive: oklch(0.6 0.22 25);
-  --border: oklch(0.9 0.005 250);
-  --input: oklch(0.9 0.005 250);
-  --ring: oklch(0.52 0.22 265);
-  --chart-1: oklch(0.52 0.22 265);
-  --chart-2: oklch(0.62 0.15 160);
-  --chart-3: oklch(0.5 0.18 300);
-  --chart-4: oklch(0.65 0.18 45);
-  --chart-5: oklch(0.55 0.2 15);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.2 0.02 255);
-  --sidebar-foreground: oklch(0.85 0.01 250);
-  --sidebar-primary: oklch(0.52 0.22 265);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.28 0.03 255);
-  --sidebar-accent-foreground: oklch(0.85 0.01 250);
-  --sidebar-border: oklch(0.3 0.02 255);
-  --sidebar-ring: oklch(0.52 0.22 265);
+  /* ── shadcn design tokens ─────────────────────────────────────────────── */
+  --background: #f8f9fb;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #374151;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+  --destructive: #ef4444;
+  --border: #e5e7eb;
+  --input: #d1d5db;
+  --ring: #6366f1;
+
+  /* ── Charts ───────────────────────────────────────────────────────────── */
+  --chart-1: #6366f1;
+  --chart-2: #10b981;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+
+  /* ── Radius ───────────────────────────────────────────────────────────── */
+  --radius: 0.625rem;
+
+  /* ── Sidebar (always dark) ────────────────────────────────────────────── */
+  --sidebar: #111827;
+  --sidebar-foreground: #d1d5db;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1f2937;
+  --sidebar-accent-foreground: #e5e7eb;
+  --sidebar-border: #1f2937;
+  --sidebar-ring: #6366f1;
+
+  /* ── TradeZella semantic tokens ────────────────────────────────────────── */
+  --tz-bg-page: #f8f9fb;
+  --tz-bg-card: #ffffff;
+  --tz-bg-card-hover: #fafbfc;
+  --tz-border: #e5e7eb;
+  --tz-border-subtle: #f0f1f3;
+  --tz-text-primary: #111827;
+  --tz-text-secondary: #4b5563;
+  --tz-text-muted: #9ca3af;
+  --tz-accent: #6366f1;
+  --tz-accent-muted: #e0e7ff;
+  --tz-profit: #16a34a;
+  --tz-loss: #ef4444;
+  --tz-input-bg: #ffffff;
+  --tz-input-border: #d1d5db;
+  --tz-sidebar-bg: #111827;
+  --tz-sidebar-text: #a8b3cf;
+  --tz-hover-bg: #f3f4f6;
+
+  /* ── Derived helpers ──────────────────────────────────────────────────── */
+  --tz-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --tz-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --tz-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* ── Skeleton ─────────────────────────────────────────────────────────── */
+  --tz-skeleton-base: #e5e7eb;
+  --tz-skeleton-shine: #f3f4f6;
+
+  /* ── Badge semantic backgrounds ───────────────────────────────────────── */
+  --tz-badge-green-bg: #dcfce7;
+  --tz-badge-green-fg: #15803d;
+  --tz-badge-red-bg: #fee2e2;
+  --tz-badge-red-fg: #b91c1c;
+  --tz-badge-indigo-bg: #e0e7ff;
+  --tz-badge-indigo-fg: #4338ca;
+  --tz-badge-amber-bg: #fef3c7;
+  --tz-badge-amber-fg: #92400e;
+  --tz-badge-gray-bg: #f1f5f9;
+  --tz-badge-gray-fg: #475569;
+  --tz-badge-purple-bg: #ede9fe;
+  --tz-badge-purple-fg: #6d28d9;
+
+  /* ── Insight card backgrounds ─────────────────────────────────────────── */
+  --tz-insight-green-bg: #f0fdf9;
+  --tz-insight-red-bg: #fff5f5;
+  --tz-insight-indigo-bg: #f5f3ff;
+  --tz-insight-amber-bg: #fffbeb;
+
+  /* ── Progress track ───────────────────────────────────────────────────── */
+  --tz-progress-track: #e8ecf4;
+
+  /* ── Scrollbar ────────────────────────────────────────────────────────── */
+  --tz-scrollbar-thumb: #d1d5db;
+  --tz-scrollbar-thumb-hover: #9ca3af;
+
+  /* ── Settings nav ─────────────────────────────────────────────────────── */
+  --tz-settings-nav-text: #6b7280;
+  --tz-settings-nav-hover-bg: #f0f4f8;
+  --tz-settings-nav-hover-text: #374151;
+  --tz-settings-nav-active-bg: #eef0ff;
+  --tz-settings-nav-active-text: #6366f1;
+
+  /* ── Form label ───────────────────────────────────────────────────────── */
+  --tz-label-color: #374151;
 }
 
-/* Force dark sidebar */
-.tz-sidebar {
-  background-color: #1e2030;
-  color: #a8b3cf;
-}
-
+/* ═══════════════════════════════════════════════════════════════════════════════
+   DARK THEME
+   Premium dark palette inspired by Linear / Vercel.
+   Rich dark blues & grays — never pure black.
+   ═══════════════════════════════════════════════════════════════════════════════ */
 .dark {
-  --background: oklch(0.14 0.01 250);
-  --foreground: oklch(0.85 0.01 250);
-  --card: oklch(0.2 0.02 255);
-  --card-foreground: oklch(0.85 0.01 250);
-  --popover: oklch(0.2 0.02 255);
-  --popover-foreground: oklch(0.85 0.01 250);
-  --primary: oklch(0.52 0.22 265);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.28 0.03 255);
-  --secondary-foreground: oklch(0.85 0.01 250);
-  --muted: oklch(0.28 0.03 255);
-  --muted-foreground: oklch(0.55 0.01 250);
-  --accent: oklch(0.28 0.03 255);
-  --accent-foreground: oklch(0.85 0.01 250);
-  --destructive: oklch(0.5 0.2 25);
-  --border: oklch(0.3 0.02 255);
-  --input: oklch(0.3 0.02 255);
-  --ring: oklch(0.52 0.22 265);
-  
-  --sidebar: oklch(0.12 0.01 250);
+  /* ── shadcn design tokens ─────────────────────────────────────────────── */
+  --background: #0f1117;
+  --foreground: #e5e7eb;
+  --card: #1a1b23;
+  --card-foreground: #e5e7eb;
+  --popover: #1a1b23;
+  --popover-foreground: #e5e7eb;
+  --primary: #818cf8;
+  --primary-foreground: #0f1117;
+  --secondary: #23242e;
+  --secondary-foreground: #d1d5db;
+  --muted: #23242e;
+  --muted-foreground: #6b7280;
+  --accent: #23242e;
+  --accent-foreground: #e5e7eb;
+  --destructive: #ef4444;
+  --border: #2a2b35;
+  --input: #2a2b35;
+  --ring: #818cf8;
+
+  /* ── Charts ───────────────────────────────────────────────────────────── */
+  --chart-1: #818cf8;
+  --chart-2: #34d399;
+  --chart-3: #a78bfa;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+
+  /* ── Sidebar ──────────────────────────────────────────────────────────── */
+  --sidebar: #0f1117;
+  --sidebar-foreground: #9ca3af;
+  --sidebar-primary: #818cf8;
+  --sidebar-primary-foreground: #0f1117;
+  --sidebar-accent: #1a1b23;
+  --sidebar-accent-foreground: #e5e7eb;
+  --sidebar-border: #2a2b35;
+  --sidebar-ring: #818cf8;
+
+  /* ── TradeZella semantic tokens ────────────────────────────────────────── */
+  --tz-bg-page: #0f1117;
+  --tz-bg-card: #1a1b23;
+  --tz-bg-card-hover: #1f2029;
+  --tz-border: #2a2b35;
+  --tz-border-subtle: #23242e;
+  --tz-text-primary: #e5e7eb;
+  --tz-text-secondary: #9ca3af;
+  --tz-text-muted: #6b7280;
+  --tz-accent: #818cf8;
+  --tz-accent-muted: rgba(129, 140, 248, 0.15);
+  --tz-profit: #34d399;
+  --tz-loss: #f87171;
+  --tz-input-bg: #1a1b23;
+  --tz-input-border: #2a2b35;
+  --tz-sidebar-bg: #0f1117;
+  --tz-sidebar-text: #9ca3af;
+  --tz-hover-bg: #1f2029;
+
+  /* ── Derived helpers ──────────────────────────────────────────────────── */
+  --tz-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --tz-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --tz-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* ── Skeleton ─────────────────────────────────────────────────────────── */
+  --tz-skeleton-base: #23242e;
+  --tz-skeleton-shine: #2a2b35;
+
+  /* ── Badge semantic backgrounds ───────────────────────────────────────── */
+  --tz-badge-green-bg: rgba(52, 211, 153, 0.12);
+  --tz-badge-green-fg: #34d399;
+  --tz-badge-red-bg: rgba(248, 113, 113, 0.12);
+  --tz-badge-red-fg: #f87171;
+  --tz-badge-indigo-bg: rgba(129, 140, 248, 0.12);
+  --tz-badge-indigo-fg: #a5b4fc;
+  --tz-badge-amber-bg: rgba(251, 191, 36, 0.12);
+  --tz-badge-amber-fg: #fbbf24;
+  --tz-badge-gray-bg: rgba(156, 163, 175, 0.12);
+  --tz-badge-gray-fg: #9ca3af;
+  --tz-badge-purple-bg: rgba(167, 139, 250, 0.12);
+  --tz-badge-purple-fg: #a78bfa;
+
+  /* ── Insight card backgrounds ─────────────────────────────────────────── */
+  --tz-insight-green-bg: rgba(52, 211, 153, 0.06);
+  --tz-insight-red-bg: rgba(248, 113, 113, 0.06);
+  --tz-insight-indigo-bg: rgba(129, 140, 248, 0.06);
+  --tz-insight-amber-bg: rgba(251, 191, 36, 0.06);
+
+  /* ── Progress track ───────────────────────────────────────────────────── */
+  --tz-progress-track: #23242e;
+
+  /* ── Scrollbar ────────────────────────────────────────────────────────── */
+  --tz-scrollbar-thumb: #2a2b35;
+  --tz-scrollbar-thumb-hover: #3a3b45;
+
+  /* ── Settings nav ─────────────────────────────────────────────────────── */
+  --tz-settings-nav-text: #6b7280;
+  --tz-settings-nav-hover-bg: #1f2029;
+  --tz-settings-nav-hover-text: #d1d5db;
+  --tz-settings-nav-active-bg: rgba(129, 140, 248, 0.1);
+  --tz-settings-nav-active-text: #818cf8;
+
+  /* ── Form label ───────────────────────────────────────────────────────── */
+  --tz-label-color: #d1d5db;
 }
 
-.dark .tz-card {
-  background: #1e2030;
-  border-color: #2a2d42;
-  color: #a8b3cf;
-}
-.dark .tz-page {
-  background: #141520;
-}
-.dark .text-gray-900, .dark .text-gray-800 {
-  color: #f1f5f9;
-}
-.dark .text-gray-700, .dark .text-gray-600 {
-  color: #e2e8f0;
-}
-.dark .text-gray-500, .dark .text-gray-400 {
-  color: #94a3b8;
-}
-.dark .bg-white {
-  background-color: #1e2030 !important;
-}
-.dark .bg-gray-50, .dark .bg-gray-100 {
-  background-color: #141520 !important;
-}
-.dark .border-gray-100, .dark .border-gray-200 {
-  border-color: #2a2d42 !important;
-}
-
+/* ═══════════════════════════════════════════════════════════════════════════════
+   BASE LAYER
+   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -151,28 +287,73 @@
   }
 }
 
-/* Custom TradeZella Styles */
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TRADEZELLA COMPONENT CLASSES
+   All colors reference CSS variables — zero hardcoded hex.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Profit / Loss inline color ─────────────────────────────────────────────── */
 .tz-profit {
-  color: #26a69a;
+  color: var(--tz-profit);
 }
 .tz-loss {
-  color: #ef5350;
+  color: var(--tz-loss);
+}
+
+/* ── Badges ─────────────────────────────────────────────────────────────────── */
+.tz-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
 }
 .tz-badge-win {
-  background-color: #26a69a22;
-  color: #26a69a;
+  background-color: var(--tz-badge-green-bg);
+  color: var(--tz-badge-green-fg);
   border-radius: 4px;
   padding: 1px 6px;
   font-size: 11px;
   font-weight: 600;
 }
 .tz-badge-loss {
-  background-color: #ef535022;
-  color: #ef5350;
+  background-color: var(--tz-badge-red-bg);
+  color: var(--tz-badge-red-fg);
   border-radius: 4px;
   padding: 1px 6px;
   font-size: 11px;
   font-weight: 600;
+}
+.tz-badge-green {
+  background: var(--tz-badge-green-bg);
+  color: var(--tz-badge-green-fg);
+}
+.tz-badge-red {
+  background: var(--tz-badge-red-bg);
+  color: var(--tz-badge-red-fg);
+}
+.tz-badge-indigo {
+  background: var(--tz-badge-indigo-bg);
+  color: var(--tz-badge-indigo-fg);
+}
+.tz-badge-amber {
+  background: var(--tz-badge-amber-bg);
+  color: var(--tz-badge-amber-fg);
+}
+.tz-badge-gray {
+  background: var(--tz-badge-gray-bg);
+  color: var(--tz-badge-gray-fg);
+}
+.tz-badge-purple {
+  background: var(--tz-badge-purple-bg);
+  color: var(--tz-badge-purple-fg);
+}
+
+/* ── Sidebar nav ────────────────────────────────────────────────────────────── */
+.tz-sidebar {
+  background-color: var(--tz-sidebar-bg);
+  color: var(--tz-sidebar-text);
 }
 .tz-nav-item {
   display: flex;
@@ -183,7 +364,7 @@
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
-  color: #a8b3cf;
+  color: var(--tz-sidebar-text);
 }
 .tz-nav-item:hover {
   background: rgba(255, 255, 255, 0.08);
@@ -191,26 +372,31 @@
 }
 .tz-nav-item.active {
   background: rgba(99, 102, 241, 0.2);
-  color: #818cf8;
+  color: var(--tz-accent);
 }
+
+/* ── Card ────────────────────────────────────────────────────────────────────── */
 .tz-card {
-  background: #fff;
-  border: 1px solid #e8ecf4;
-  border-radius: 10px;
+  background: var(--tz-bg-card);
+  border: 1px solid var(--tz-border);
+  border-radius: var(--radius);
+  color: var(--tz-text-primary);
 }
+
+/* ── Tab active ──────────────────────────────────────────────────────────────── */
 .tz-tab-active {
-  border-bottom: 2px solid #6366f1;
-  color: #1e2030;
+  border-bottom: 2px solid var(--tz-accent);
+  color: var(--tz-text-primary);
   font-weight: 600;
 }
 
-/* ── Page-level utilities ───────────────────────────────────────────────── */
+/* ── Page layout ─────────────────────────────────────────────────────────────── */
 .tz-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 20px;
-  background: var(--background);
+  background: var(--tz-bg-page);
   min-height: 100%;
 }
 
@@ -239,22 +425,22 @@ body.layout-spacious .tz-card {
 .tz-section-title {
   font-size: 14px;
   font-weight: 700;
-  color: #1e2030;
+  color: var(--tz-text-primary);
   margin-bottom: 12px;
 }
 
-/* ── Buttons ────────────────────────────────────────────────────────────── */
+/* ── Buttons ─────────────────────────────────────────────────────────────────── */
 .tz-btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 0 14px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 12px;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  background: var(--tz-accent);
   border: none;
   cursor: pointer;
   transition: opacity 0.15s;
@@ -269,74 +455,20 @@ body.layout-spacious .tz-card {
   gap: 6px;
   padding: 0 14px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 12px;
   font-weight: 500;
-  color: #374151;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  color: var(--tz-text-secondary);
+  background: var(--tz-bg-card);
+  border: 1px solid var(--tz-border);
   cursor: pointer;
   transition: background 0.15s;
 }
 .tz-btn-secondary:hover {
-  background: #f8fafc;
+  background: var(--tz-hover-bg);
 }
 
-/* ── Badges ─────────────────────────────────────────────────────────────── */
-.tz-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.tz-badge-green {
-  background: #d4edda;
-  color: #1a7a5e;
-}
-.tz-badge-red {
-  background: #fde0e0;
-  color: #c0392b;
-}
-.tz-badge-indigo {
-  background: #e0e7ff;
-  color: #4338ca;
-}
-.tz-badge-amber {
-  background: #fef3c7;
-  color: #92400e;
-}
-.tz-badge-gray {
-  background: #f1f5f9;
-  color: #475569;
-}
-.tz-badge-purple {
-  background: #ede9fe;
-  color: #6d28d9;
-}
-
-/* ── Progress bar ────────────────────────────────────────────────────────── */
-.tz-progress-track {
-  height: 6px;
-  background: #e8ecf4;
-  border-radius: 99px;
-  overflow: hidden;
-}
-.tz-progress-fill {
-  height: 100%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, #6366f1, #818cf8);
-  transition: width 0.4s ease;
-}
-.tz-progress-fill-green {
-  background: linear-gradient(90deg, #26a69a, #4dd0c4);
-}
-.tz-progress-fill-red {
-  background: linear-gradient(90deg, #ef5350, #f87171);
-}
-
-/* ── Settings sidebar ────────────────────────────────────────────────────── */
+/* ── Settings sidebar nav ────────────────────────────────────────────────────── */
 .tz-settings-nav-item {
   display: flex;
   align-items: center;
@@ -345,62 +477,136 @@ body.layout-spacious .tz-card {
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--tz-settings-nav-text);
   cursor: pointer;
   transition: all 0.15s;
 }
 .tz-settings-nav-item:hover {
-  background: #f0f4f8;
-  color: #374151;
+  background: var(--tz-settings-nav-hover-bg);
+  color: var(--tz-settings-nav-hover-text);
 }
 .tz-settings-nav-item.active {
-  background: #eef0ff;
-  color: #6366f1;
+  background: var(--tz-settings-nav-active-bg);
+  color: var(--tz-settings-nav-active-text);
   font-weight: 600;
 }
 
-/* ── Form ────────────────────────────────────────────────────────────────── */
+/* ── Form inputs ─────────────────────────────────────────────────────────────── */
 .tz-input {
   width: 100%;
   height: 36px;
   padding: 0 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid var(--tz-input-border);
+  border-radius: var(--radius);
   font-size: 13px;
-  color: #374151;
-  background: #fff;
+  color: var(--tz-text-primary);
+  background: var(--tz-input-bg);
   outline: none;
   transition: border-color 0.15s;
 }
 .tz-input:focus {
-  border-color: #6366f1;
+  border-color: var(--tz-accent);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
+.tz-input::placeholder {
+  color: var(--tz-text-muted);
+}
+
 .tz-label {
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
+  color: var(--tz-label-color);
   margin-bottom: 6px;
   display: block;
 }
+
 .tz-textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid var(--tz-input-border);
+  border-radius: var(--radius);
   font-size: 13px;
-  color: #374151;
-  background: #fff;
+  color: var(--tz-text-primary);
+  background: var(--tz-input-bg);
   outline: none;
   resize: vertical;
   transition: border-color 0.15s;
 }
 .tz-textarea:focus {
-  border-color: #6366f1;
+  border-color: var(--tz-accent);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
+.tz-textarea::placeholder {
+  color: var(--tz-text-muted);
+}
 
-/* ── Skeleton shimmer ────────────────────────────────────────────────────── */
+/* ── Progress bar ────────────────────────────────────────────────────────────── */
+.tz-progress-track {
+  height: 6px;
+  background: var(--tz-progress-track);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.tz-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--tz-accent);
+  transition: width 0.4s ease;
+}
+.tz-progress-fill-green {
+  background: var(--tz-profit);
+}
+.tz-progress-fill-red {
+  background: var(--tz-loss);
+}
+
+/* ── Insight cards ───────────────────────────────────────────────────────────── */
+.tz-insight-card-green {
+  border-left: 3px solid var(--tz-profit);
+  background: var(--tz-insight-green-bg);
+}
+.tz-insight-card-red {
+  border-left: 3px solid var(--tz-loss);
+  background: var(--tz-insight-red-bg);
+}
+.tz-insight-card-indigo {
+  border-left: 3px solid var(--tz-accent);
+  background: var(--tz-insight-indigo-bg);
+}
+.tz-insight-card-amber {
+  border-left: 3px solid #f59e0b;
+  background: var(--tz-insight-amber-bg);
+}
+
+/* ── Community post card ─────────────────────────────────────────────────────── */
+.tz-post-card {
+  background: var(--tz-bg-card);
+  border: 1px solid var(--tz-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: box-shadow 0.15s;
+}
+.tz-post-card:hover {
+  box-shadow: var(--tz-shadow-md);
+}
+
+/* ── Academy course card ─────────────────────────────────────────────────────── */
+.tz-course-card {
+  background: var(--tz-bg-card);
+  border: 1px solid var(--tz-border);
+  border-radius: calc(var(--radius) * 1.4);
+  overflow: hidden;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
+  cursor: pointer;
+}
+.tz-course-card:hover {
+  box-shadow: var(--tz-shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────────────────────── */
 @keyframes tz-shimmer {
   0% {
     background-position: -200px 0;
@@ -410,59 +616,18 @@ body.layout-spacious .tz-card {
   }
 }
 .tz-skeleton {
-  background: linear-gradient(90deg, #f0f4f8 25%, #e8ecf4 50%, #f0f4f8 75%);
+  background: linear-gradient(
+    90deg,
+    var(--tz-skeleton-base) 25%,
+    var(--tz-skeleton-shine) 50%,
+    var(--tz-skeleton-base) 75%
+  );
   background-size: 200px 100%;
   animation: tz-shimmer 1.4s ease infinite;
   border-radius: 6px;
 }
 
-/* ── Insight cards ───────────────────────────────────────────────────────── */
-.tz-insight-card-green {
-  border-left: 3px solid #26a69a;
-  background: #f0fdf9;
-}
-.tz-insight-card-red {
-  border-left: 3px solid #ef5350;
-  background: #fff5f5;
-}
-.tz-insight-card-indigo {
-  border-left: 3px solid #6366f1;
-  background: #f5f3ff;
-}
-.tz-insight-card-amber {
-  border-left: 3px solid #f59e0b;
-  background: #fffbeb;
-}
-
-/* ── Community card ──────────────────────────────────────────────────────── */
-.tz-post-card {
-  background: #fff;
-  border: 1px solid #e8ecf4;
-  border-radius: 10px;
-  padding: 16px;
-  transition: box-shadow 0.15s;
-}
-.tz-post-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-/* ── Academy course card ─────────────────────────────────────────────────── */
-.tz-course-card {
-  background: #fff;
-  border: 1px solid #e8ecf4;
-  border-radius: 12px;
-  overflow: hidden;
-  transition:
-    box-shadow 0.2s,
-    transform 0.2s;
-  cursor: pointer;
-}
-.tz-course-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-
-/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+/* ── Scrollbar ───────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -471,9 +636,109 @@ body.layout-spacious .tz-card {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--tz-scrollbar-thumb);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: var(--tz-scrollbar-thumb-hover);
 }
+
+/* ─── TipTap Rich Text Editor ──────────────────────────────────────────────── */
+.tiptap-editor .tiptap {
+  outline: none;
+  min-height: 180px;
+}
+
+.tiptap-editor .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--tz-text-muted);
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
+}
+
+.tiptap-editor .tiptap h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.25rem;
+  color: var(--tz-text-primary);
+}
+
+.tiptap-editor .tiptap h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.6rem 0 0.2rem;
+  color: var(--tz-text-primary);
+}
+
+.tiptap-editor .tiptap h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.15rem;
+  color: var(--tz-text-primary);
+}
+
+.tiptap-editor .tiptap p {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+
+.tiptap-editor .tiptap ul,
+.tiptap-editor .tiptap ol {
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+
+.tiptap-editor .tiptap li {
+  margin: 0.1rem 0;
+}
+
+.tiptap-editor .tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap-editor .tiptap ol {
+  list-style-type: decimal;
+}
+
+.tiptap-editor .tiptap blockquote {
+  border-left: 3px solid var(--tz-accent);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: var(--tz-text-secondary);
+  font-style: italic;
+}
+
+.tiptap-editor .tiptap hr {
+  border: none;
+  border-top: 1px solid var(--tz-border);
+  margin: 0.75rem 0;
+}
+
+.tiptap-editor .tiptap img {
+  border-radius: 0.5rem;
+  max-width: 100%;
+  height: auto;
+  margin: 0.5rem 0;
+  border: 1px solid var(--tz-border-subtle);
+}
+
+.tiptap-editor .tiptap a {
+  color: var(--tz-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap-editor .tiptap strong {
+  font-weight: 600;
+}
+
+.tiptap-editor .tiptap code {
+  background: var(--tz-hover-bg);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+  font-family: var(--font-mono);
+}
+

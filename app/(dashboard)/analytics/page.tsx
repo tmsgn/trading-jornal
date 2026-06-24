@@ -1,29 +1,29 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
 import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
-import {
-  TrendingUp,
-  TrendingDown,
   Activity,
   BarChart2,
-  Target,
   Calendar,
+  Target,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
-import { Trade } from "@/lib/data";
+import type React from "react";
+import { useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { useTrades } from "@/components/providers/TradeProvider";
 
 type DateRange = "1W" | "1M" | "3M" | "6M" | "YTD" | "All";
@@ -68,8 +68,8 @@ function EquityTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="tz-card px-3 py-2 text-xs shadow-lg bg-white border border-gray-100">
-      <p className="text-gray-500 mb-0.5">{label}</p>
+    <div className="tz-card px-3 py-2 text-xs shadow-lg bg-[var(--tz-bg-card)] border border-[var(--tz-border-subtle)]">
+      <p className="text-[var(--tz-text-muted)] mb-0.5">{label}</p>
       <p className="font-bold text-indigo-600">
         ${payload[0].value.toLocaleString()}
       </p>
@@ -87,10 +87,10 @@ function ScatterTooltip({
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
-    <div className="tz-card px-3 py-2 text-xs shadow-lg bg-white border border-gray-100">
-      <p className="text-gray-500">
+    <div className="tz-card px-3 py-2 text-xs shadow-lg bg-[var(--tz-bg-card)] border border-[var(--tz-border-subtle)]">
+      <p className="text-[var(--tz-text-muted)]">
         Duration:{" "}
-        <span className="font-semibold text-gray-700">{d.duration} min</span>
+        <span className="font-semibold text-[var(--tz-text-secondary)]">{d.duration} min</span>
       </p>
       <p
         className="font-bold"
@@ -123,7 +123,7 @@ function KpiCard({
   };
   const c = colorMap[color];
   return (
-    <div className="tz-card p-4 flex items-start gap-3 bg-white">
+    <div className="tz-card p-4 flex items-start gap-3 bg-[var(--tz-bg-card)]">
       <div
         className="rounded-lg p-2 flex-shrink-0"
         style={{ background: c.bg }}
@@ -131,14 +131,14 @@ function KpiCard({
         <Icon size={16} style={{ color: c.text }} />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-gray-400 font-medium mb-0.5">{label}</p>
+        <p className="text-xs text-[var(--tz-text-muted)] font-medium mb-0.5">{label}</p>
         <p
           className="text-base font-bold leading-tight"
           style={{ color: c.text }}
         >
           {value}
         </p>
-        {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
+        {sub && <p className="text-[11px] text-[var(--tz-text-muted)] mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -153,7 +153,7 @@ export default function AnalyticsPage() {
   // Filter trades based on date range selected (Relative to December 2023)
   const rangeFilteredTrades = useMemo(() => {
     const closed = trades.filter((t) => t.status === "Closed");
-    
+
     // Sort chronologically for timeline evaluations
     const sorted = [...closed].sort((a, b) => {
       const dateCompare = a.date.localeCompare(b.date);
@@ -167,7 +167,7 @@ export default function AnalyticsPage() {
     if (range === "1W") return sorted.slice(-4);
     if (range === "1M") return sorted.slice(-10);
     if (range === "3M") return sorted.slice(-15);
-    
+
     return sorted;
   }, [trades, range]);
 
@@ -179,7 +179,7 @@ export default function AnalyticsPage() {
     let currentEquity = 0;
     let peak = 0;
     let maxDD = 0;
-    
+
     const equityCurve = list.map((t) => {
       currentEquity += t.netPnl;
       if (currentEquity > peak) {
@@ -190,12 +190,25 @@ export default function AnalyticsPage() {
           maxDD = dd;
         }
       }
-      
+
       const parts = t.date.split("-");
       let formattedDate = t.date;
       if (parts.length === 3) {
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        formattedDate = `${months[parseInt(parts[1]) - 1]} ${parts[2]}`;
+        const months = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        formattedDate = `${months[parseInt(parts[1], 10) - 1]} ${parts[2]}`;
       }
 
       return {
@@ -213,9 +226,13 @@ export default function AnalyticsPage() {
     const winTrades = list.filter((t) => t.netPnl > 0);
     const winRate = list.length > 0 ? winTrades.length / list.length : 0;
     const losses = list.filter((t) => t.netPnl < 0);
-    const sharpe = list.length > 0
-      ? Math.min(Math.max((winRate * 4.5) - (losses.length * 0.05), 0.5), 4.2).toFixed(2)
-      : "0.00";
+    const sharpe =
+      list.length > 0
+        ? Math.min(
+            Math.max(winRate * 4.5 - losses.length * 0.05, 0.5),
+            4.2,
+          ).toFixed(2)
+        : "0.00";
 
     // 3. Daily Stats for Avg Daily P&L
     const dayMap: Record<string, number> = {};
@@ -223,14 +240,16 @@ export default function AnalyticsPage() {
       dayMap[t.date] = (dayMap[t.date] || 0) + t.netPnl;
     }
     const dailyPnlValues = Object.values(dayMap);
-    const avgDailyPnl = dailyPnlValues.length > 0
-      ? dailyPnlValues.reduce((s, v) => s + v, 0) / dailyPnlValues.length
-      : 0;
+    const avgDailyPnl =
+      dailyPnlValues.length > 0
+        ? dailyPnlValues.reduce((s, v) => s + v, 0) / dailyPnlValues.length
+        : 0;
 
     // 4. Profit Factor
     const grossProfit = winTrades.reduce((s, t) => s + t.netPnl, 0);
     const grossLoss = Math.abs(losses.reduce((s, t) => s + t.netPnl, 0));
-    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 10.0 : 0;
+    const profitFactor =
+      grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 10.0 : 0;
 
     // 5. P&L Distribution buckets
     const distributionMap = {
@@ -239,11 +258,11 @@ export default function AnalyticsPage() {
       "-$200": 0,
       "-$100": 0,
       "-$50": 0,
-      "$0": 0,
-      "$50": 0,
-      "$100": 0,
-      "$200": 0,
-      "$300": 0,
+      $0: 0,
+      $50: 0,
+      $100: 0,
+      $200: 0,
+      $300: 0,
       "$500+": 0,
     };
 
@@ -254,19 +273,21 @@ export default function AnalyticsPage() {
       else if (p > -250 && p <= -150) distributionMap["-$200"]++;
       else if (p > -150 && p <= -50) distributionMap["-$100"]++;
       else if (p > -50 && p < 0) distributionMap["-$50"]++;
-      else if (p === 0) distributionMap["$0"]++;
-      else if (p > 0 && p <= 50) distributionMap["$50"]++;
-      else if (p > 50 && p <= 150) distributionMap["$100"]++;
-      else if (p > 150 && p <= 250) distributionMap["$200"]++;
-      else if (p > 250 && p <= 450) distributionMap["$300"]++;
+      else if (p === 0) distributionMap.$0++;
+      else if (p > 0 && p <= 50) distributionMap.$50++;
+      else if (p > 50 && p <= 150) distributionMap.$100++;
+      else if (p > 150 && p <= 250) distributionMap.$200++;
+      else if (p > 250 && p <= 450) distributionMap.$300++;
       else if (p > 450) distributionMap["$500+"]++;
     }
 
-    const pnlDistribution = Object.entries(distributionMap).map(([bucket, count]) => ({
-      bucket,
-      count,
-      isLoss: bucket.startsWith("-"),
-    }));
+    const pnlDistribution = Object.entries(distributionMap).map(
+      ([bucket, count]) => ({
+        bucket,
+        count,
+        isLoss: bucket.startsWith("-"),
+      }),
+    );
 
     // 6. Win Rate by Weekday
     const countsByDay = [0, 0, 0, 0, 0, 0, 0];
@@ -274,7 +295,11 @@ export default function AnalyticsPage() {
     for (const t of list) {
       const parts = t.date.split("-");
       if (parts.length === 3) {
-        const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        const dateObj = new Date(
+          parseInt(parts[0], 10),
+          parseInt(parts[1], 10) - 1,
+          parseInt(parts[2], 10),
+        );
         const dayIdx = dateObj.getDay();
         countsByDay[dayIdx]++;
         if (t.netPnl > 0) winsByDay[dayIdx]++;
@@ -307,20 +332,26 @@ export default function AnalyticsPage() {
 
     // 9. Hourly Heatmap
     const heatmapData = HEATMAP_HOURS.map((hStr) => {
-      const targetHour = parseInt(hStr.split(":")[0]);
+      const targetHour = parseInt(hStr.split(":")[0], 10);
       return HEATMAP_DAYS.map((_, dIdx) => {
         const dayOfWeekIndex = dIdx + 1; // Mon is 1
-        
+
         const matchingTrades = list.filter((t) => {
-          const tradeHour = parseInt(t.time.split(":")[0]);
+          const tradeHour = parseInt(t.time.split(":")[0], 10);
           const parts = t.date.split("-");
           if (parts.length === 3) {
-            const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            return dateObj.getDay() === dayOfWeekIndex && tradeHour === targetHour;
+            const dateObj = new Date(
+              parseInt(parts[0], 10),
+              parseInt(parts[1], 10) - 1,
+              parseInt(parts[2], 10),
+            );
+            return (
+              dateObj.getDay() === dayOfWeekIndex && tradeHour === targetHour
+            );
           }
           return false;
         });
-        
+
         if (matchingTrades.length === 0) return 0;
         const total = matchingTrades.reduce((sum, t) => sum + t.netPnl, 0);
         return Math.round(total / matchingTrades.length);
@@ -348,12 +379,12 @@ export default function AnalyticsPage() {
       {/* ── Page Header ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-xl font-bold text-[var(--tz-text-primary)]">Analytics</h1>
+          <p className="text-sm text-[var(--tz-text-muted)] mt-0.5">
             Deep dive into your trading performance
           </p>
         </div>
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-full p-1 shadow-sm">
+        <div className="flex items-center gap-1 bg-[var(--tz-bg-card)] border border-[var(--tz-border)] rounded-full p-1 shadow-sm">
           {ranges.map((r) => (
             <button
               key={r}
@@ -417,19 +448,21 @@ export default function AnalyticsPage() {
       {/* ── Row 1: Equity Curve + P&L Distribution ────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
         {/* Equity Curve — 2/3 width */}
-        <div className="tz-card p-4 col-span-2 bg-white">
+        <div className="tz-card p-4 col-span-2 bg-[var(--tz-bg-card)]">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-800">
+              <h2 className="text-sm font-semibold text-[var(--tz-text-primary)]">
                 Equity Curve
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-[var(--tz-text-muted)] mt-0.5">
                 Cumulative P&L over time
               </p>
             </div>
             <span
               className="text-sm font-black"
-              style={{ color: computations.totalPnl >= 0 ? "#26a69a" : "#ef5350" }}
+              style={{
+                color: computations.totalPnl >= 0 ? "#26a69a" : "#ef5350",
+              }}
             >
               {fmt(computations.totalPnl)}
             </span>
@@ -483,12 +516,12 @@ export default function AnalyticsPage() {
         </div>
 
         {/* P&L Distribution — 1/3 width */}
-        <div className="tz-card p-4 bg-white">
+        <div className="tz-card p-4 bg-[var(--tz-bg-card)]">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-gray-800">
+            <h2 className="text-sm font-semibold text-[var(--tz-text-primary)]">
               P&L Distribution
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-[var(--tz-text-muted)] mt-0.5">
               Trade outcome frequency
             </p>
           </div>
@@ -534,12 +567,12 @@ export default function AnalyticsPage() {
       {/* ── Row 2: Three Charts ───────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
         {/* Win Rate by Day */}
-        <div className="tz-card p-4 bg-white">
+        <div className="tz-card p-4 bg-[var(--tz-bg-card)]">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-gray-800">
+            <h2 className="text-sm font-semibold text-[var(--tz-text-primary)]">
               Win Rate by Day of Week
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-[var(--tz-text-muted)] mt-0.5">
               Historical win % per weekday
             </p>
           </div>
@@ -593,26 +626,26 @@ export default function AnalyticsPage() {
           <div className="mt-2 flex items-center justify-center gap-3">
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-indigo-500" />
-              <span className="text-[10px] text-gray-400">≥60%</span>
+              <span className="text-[10px] text-[var(--tz-text-muted)]">≥60%</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-indigo-300" />
-              <span className="text-[10px] text-gray-400">45–60%</span>
+              <span className="text-[10px] text-[var(--tz-text-muted)]">45–60%</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-indigo-100" />
-              <span className="text-[10px] text-gray-400">&lt;45%</span>
+              <span className="text-[10px] text-[var(--tz-text-muted)]">&lt;45%</span>
             </div>
           </div>
         </div>
 
         {/* Trade Duration vs P&L Scatter */}
-        <div className="tz-card p-4 bg-white">
+        <div className="tz-card p-4 bg-[var(--tz-bg-card)]">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-gray-800">
+            <h2 className="text-sm font-semibold text-[var(--tz-text-primary)]">
               Duration vs P&L
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-[var(--tz-text-muted)] mt-0.5">
               Trade hold time correlation
             </p>
           </div>
@@ -665,39 +698,44 @@ export default function AnalyticsPage() {
                 className="w-2 h-2 rounded-full"
                 style={{ background: "#26a69a" }}
               />
-              <span className="text-[10px] text-gray-400">Wins</span>
+              <span className="text-[10px] text-[var(--tz-text-muted)]">Wins</span>
             </div>
             <div className="flex items-center gap-1">
               <div
                 className="w-2 h-2 rounded-full"
                 style={{ background: "#ef5350" }}
               />
-              <span className="text-[10px] text-gray-400">Losses</span>
+              <span className="text-[10px] text-[var(--tz-text-muted)]">Losses</span>
             </div>
           </div>
         </div>
 
         {/* Best Performing Symbols */}
-        <div className="tz-card p-4 bg-white">
+        <div className="tz-card p-4 bg-[var(--tz-bg-card)]">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-gray-800">
+            <h2 className="text-sm font-semibold text-[var(--tz-text-primary)]">
               Best Performing Symbols
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">Net P&L by ticker</p>
+            <p className="text-xs text-[var(--tz-text-muted)] mt-0.5">Net P&L by ticker</p>
           </div>
           {computations.symbolPerformance.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 text-xs">No symbols traded yet.</div>
+            <div className="py-12 text-center text-[var(--tz-text-muted)] text-xs">
+              No symbols traded yet.
+            </div>
           ) : (
             <div className="flex flex-col gap-3 mt-2">
-              {computations.symbolPerformance.map((s, idx) => {
-                const maxPnl = Math.max(...computations.symbolPerformance.map((item) => item.pnl), 1);
+              {computations.symbolPerformance.map((s, _idx) => {
+                const maxPnl = Math.max(
+                  ...computations.symbolPerformance.map((item) => item.pnl),
+                  1,
+                );
                 const pct = Math.max((s.pnl / maxPnl) * 100, 5);
                 const isLoss = s.pnl < 0;
 
                 return (
                   <div key={s.symbol}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-semibold text-gray-700">
+                      <span className="text-xs font-semibold text-[var(--tz-text-secondary)]">
                         {s.symbol}
                       </span>
                       <span
@@ -726,11 +764,17 @@ export default function AnalyticsPage() {
               })}
             </div>
           )}
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <div className="flex justify-between text-[11px] text-gray-400">
+          <div className="mt-4 pt-3 border-t border-[var(--tz-border-subtle)]">
+            <div className="flex justify-between text-[11px] text-[var(--tz-text-muted)]">
               <span>{computations.symbolCount} symbols traded</span>
-              <span className="font-semibold" style={{ color: computations.totalPnl >= 0 ? "#26a69a" : "#ef5350" }}>
-                {computations.totalPnl >= 0 ? "+" : ""}${computations.totalPnl.toFixed(2)} total
+              <span
+                className="font-semibold"
+                style={{
+                  color: computations.totalPnl >= 0 ? "#26a69a" : "#ef5350",
+                }}
+              >
+                {computations.totalPnl >= 0 ? "+" : ""}$
+                {computations.totalPnl.toFixed(2)} total
               </span>
             </div>
           </div>
@@ -738,23 +782,23 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── Row 3: P&L Heatmap ───────────────────────────────────────────── */}
-      <div className="tz-card p-4 bg-white">
+      <div className="tz-card p-4 bg-[var(--tz-bg-card)]">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-800">P&L Heatmap</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <h2 className="text-sm font-semibold text-[var(--tz-text-primary)]">P&L Heatmap</h2>
+            <p className="text-xs text-[var(--tz-text-muted)] mt-0.5">
               Average P&L by time of day and day of week
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Calendar size={13} className="text-gray-400" />
-            <span className="text-xs text-gray-400">Live Trade Log</span>
+            <Calendar size={13} className="text-[var(--tz-text-muted)]" />
+            <span className="text-xs text-[var(--tz-text-muted)]">Live Trade Log</span>
           </div>
         </div>
 
         {/* Legend */}
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] text-gray-400">Loss</span>
+          <span className="text-[10px] text-[var(--tz-text-muted)]">Loss</span>
           {[
             "#c0392b",
             "#fde8e8",
@@ -769,7 +813,7 @@ export default function AnalyticsPage() {
               style={{ background: bg }}
             />
           ))}
-          <span className="text-[10px] text-gray-400">Profit</span>
+          <span className="text-[10px] text-[var(--tz-text-muted)]">Profit</span>
         </div>
 
         {/* Grid */}
@@ -777,18 +821,18 @@ export default function AnalyticsPage() {
           <table className="w-full text-xs">
             <thead>
               <tr>
-                <th className="w-14 text-left py-1 text-gray-400 font-medium text-[11px]">
+                <th className="w-14 text-left py-1 text-[var(--tz-text-muted)] font-medium text-[11px]">
                   Time
                 </th>
                 {HEATMAP_DAYS.map((d) => (
                   <th
                     key={d}
-                    className="text-center py-1 text-gray-500 font-semibold text-[11px]"
+                    className="text-center py-1 text-[var(--tz-text-muted)] font-semibold text-[11px]"
                   >
                     {d}
                   </th>
                 ))}
-                <th className="text-right py-1 text-gray-400 font-medium text-[11px] pl-2">
+                <th className="text-right py-1 text-[var(--tz-text-muted)] font-medium text-[11px] pl-2">
                   Avg
                 </th>
               </tr>
@@ -797,11 +841,11 @@ export default function AnalyticsPage() {
               {HEATMAP_HOURS.map((hour, hi) => {
                 const row = computations.heatmapData[hi] || [0, 0, 0, 0, 0];
                 const rowAvg = Math.round(
-                  row.reduce((a, b) => a + b, 0) / row.length
+                  row.reduce((a, b) => a + b, 0) / row.length,
                 );
                 return (
                   <tr key={hour}>
-                    <td className="py-1 text-gray-400 font-medium text-[11px]">
+                    <td className="py-1 text-[var(--tz-text-muted)] font-medium text-[11px]">
                       {hour}
                     </td>
                     {row.map((val, di) => {
@@ -843,14 +887,17 @@ export default function AnalyticsPage() {
               })}
 
               {/* Column averages */}
-              <tr className="border-t border-gray-100">
-                <td className="pt-2 text-gray-400 font-medium text-[11px]">
+              <tr className="border-t border-[var(--tz-border-subtle)]">
+                <td className="pt-2 text-[var(--tz-text-muted)] font-medium text-[11px]">
                   Avg
                 </td>
                 {HEATMAP_DAYS.map((_, di) => {
-                  const colVals = computations.heatmapData.map((r) => r[di] || 0);
+                  const colVals = computations.heatmapData.map(
+                    (r) => r[di] || 0,
+                  );
                   const colAvg = Math.round(
-                    colVals.reduce((a, b) => a + b, 0) / Math.max(colVals.length, 1)
+                    colVals.reduce((a, b) => a + b, 0) /
+                      Math.max(colVals.length, 1),
                   );
                   const c = heatmapColor(colAvg);
                   return (

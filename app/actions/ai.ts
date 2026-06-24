@@ -1,6 +1,6 @@
 "use server";
 
-import { Trade } from "@/lib/data";
+import type { Trade } from "@/lib/data";
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "<REDACTED>";
 
@@ -13,18 +13,24 @@ export async function generateInsightsAction(trades: Trade[]) {
     };
   }
 
-  // We send a summary of the trades to the LLM to save tokens and speed up generation
-  const summary = trades.slice(0, 50).map((t) => ({
-    symbol: t.symbol,
-    side: t.side,
-    netPnl: t.netPnl,
-    duration: t.duration,
+  // We send a dense, token-efficient payload to the LLM
+  const summary = trades.slice(0, 100).map((t) => ({
+    sym: t.symbol,
+    s: t.side,
+    pnl: t.netPnl,
+    dur: t.duration,
+    t: t.time,
     rr: t.rr,
+    tags: t.tags,
+    ruleSync: t.rulesChecklist ? (t.rulesChecklist.planFollowed ? 1 : 0) : null,
   }));
 
   const prompt = `
-  You are an expert, professional trading coach. I am going to give you my recent trade history.
-  Please analyze my performance and give me 3 distinct JSON arrays. Be realistic and data-driven.
+  You are an expert, professional trading risk manager. Analyze this trade history.
+  You MUST explicitly scan for behavioral blind spots, specifically looking for:
+  1. Revenge Trading: Rapid consecutive trades or increased frequency immediately following a loss.
+  2. Session Slippage: Taking trades outside the primary execution window (e.g., outside 09:30 - 11:30 NY time). Note: "t" is the execution time.
+  3. Rule Adherence: Correlating execution notes and the "ruleSync" flag against strategy boundaries.
   
   Return strictly in this JSON format:
   {
@@ -35,12 +41,12 @@ export async function generateInsightsAction(trades: Trade[]) {
       { "factor": "e.g. Time of Day", "condition": "e.g. Morning", "winRate": "60%", "avgPnl": "+$200" } 
     ],
     "recommendations": [ 
-      { "priority": "High", "title": "e.g. Stop overtrading", "description": "...", "impact": "Est +$100/mo" } 
+      { "priority": "High", "title": "e.g. Stop Revenge Trading", "description": "...", "impact": "Est +$100/mo" } 
     ]
   }
   Note: priority must be exactly "High", "Medium", or "Low".
 
-  Here are my trades: ${JSON.stringify(summary)}
+  Here are my trades (sym=symbol, s=side, pnl=netPnl, dur=duration(min), t=time, ruleSync=1 if plan followed): ${JSON.stringify(summary)}
   `;
 
   try {

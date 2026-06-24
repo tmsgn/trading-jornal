@@ -1,35 +1,33 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
 import {
-  Sparkles,
-  CheckCircle2,
-  XCircle,
-  Lightbulb,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  Brain,
-  Target,
-  Zap,
   ArrowUp,
   BarChart3,
+  Brain,
+  CheckCircle2,
   Clock,
   DollarSign,
+  Lightbulb,
+  Sparkles,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  XCircle,
 } from "lucide-react";
+import type React from "react";
+import { useMemo, useState } from "react";
 import {
-  RadarChart,
-  Radar,
-  PolarGrid,
   PolarAngleAxis,
+  PolarGrid,
   PolarRadiusAxis,
+  Radar,
+  RadarChart,
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { Trade } from "@/lib/data";
-import { useTrades } from "@/components/providers/TradeProvider";
 import { toast } from "sonner";
 import { generateInsightsAction } from "@/app/actions/ai";
+import { useTrades } from "@/components/providers/TradeProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,7 +74,7 @@ export default function AIInsightsPage() {
   async function handleAnalyze() {
     setAnalyzing(true);
     setAnalysisStep(0);
-    
+
     const steps = [
       "Loading trade database...",
       "Evaluating rules checklists and compliance ratios...",
@@ -99,7 +97,7 @@ export default function AIInsightsPage() {
       setCorrelations(insights.correlations || []);
       setRecommendations(insights.recommendations || []);
       toast.success(`AI Analysis complete! Scanned ${trades.length} trades.`);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to generate insights.");
     } finally {
       clearInterval(timer);
@@ -110,35 +108,56 @@ export default function AIInsightsPage() {
   // ─── Dynamic Metrics & Calculations ──────────────────────────────────────────
   const dynamicMetrics = useMemo(() => {
     const closed = trades.filter((t) => t.status === "Closed");
-    
+
     // 1. Win Rate
     const winTrades = closed.filter((t) => t.netPnl > 0);
-    const winRatePct = closed.length > 0 ? (winTrades.length / closed.length) * 100 : 0;
-    
+    const winRatePct =
+      closed.length > 0 ? (winTrades.length / closed.length) * 100 : 0;
+
     // 2. Profit Factor
     const grossProfit = winTrades.reduce((sum, t) => sum + t.netPnl, 0);
-    const grossLoss = Math.abs(closed.filter((t) => t.netPnl < 0).reduce((sum, t) => sum + t.netPnl, 0));
-    const profitFactorVal = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 15.0 : 0;
+    const grossLoss = Math.abs(
+      closed.filter((t) => t.netPnl < 0).reduce((sum, t) => sum + t.netPnl, 0),
+    );
+    const profitFactorVal =
+      grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 15.0 : 0;
 
     // 3. Avg Hold Time
-    const avgHold = closed.length > 0 ? closed.reduce((sum, t) => sum + t.duration, 0) / closed.length : 0;
+    const avgHold =
+      closed.length > 0
+        ? closed.reduce((sum, t) => sum + t.duration, 0) / closed.length
+        : 0;
 
     // 4. Apex Score Dimensions
     // Rules Checklist Compliance
     const tradesWithChecklist = trades.filter((t) => t.rulesChecklist);
-    const riskCompliance = tradesWithChecklist.length > 0
-      ? (tradesWithChecklist.filter((t) => t.rulesChecklist?.riskManaged && t.rulesChecklist?.stopLossSet).length / tradesWithChecklist.length) * 100
-      : 72; // default mock fallback
-      
-    const disciplineCompliance = tradesWithChecklist.length > 0
-      ? (tradesWithChecklist.filter((t) => t.rulesChecklist?.planFollowed).length / tradesWithChecklist.length) * 100
-      : 78;
+    const riskCompliance =
+      tradesWithChecklist.length > 0
+        ? (tradesWithChecklist.filter(
+            (t) =>
+              t.rulesChecklist?.riskManaged && t.rulesChecklist?.stopLossSet,
+          ).length /
+            tradesWithChecklist.length) *
+          100
+        : 72; // default mock fallback
 
-    const executionScore = trades.length > 0
-      ? (trades.filter((t) => t.hasNote || (t.psychology && t.psychology.notes)).length / trades.length) * 100
-      : 80;
+    const disciplineCompliance =
+      tradesWithChecklist.length > 0
+        ? (tradesWithChecklist.filter((t) => t.rulesChecklist?.planFollowed)
+            .length /
+            tradesWithChecklist.length) *
+          100
+        : 78;
 
-    const consistencyScore = profitFactorVal > 1.8 ? 85 : profitFactorVal > 1.2 ? 75 : 62;
+    const executionScore =
+      trades.length > 0
+        ? (trades.filter((t) => t.hasNote || t.psychology?.notes).length /
+            trades.length) *
+          100
+        : 80;
+
+    const consistencyScore =
+      profitFactorVal > 1.8 ? 85 : profitFactorVal > 1.2 ? 75 : 62;
 
     const pfScore = Math.min((profitFactorVal / 2.5) * 100, 100);
 
@@ -158,7 +177,7 @@ export default function AIInsightsPage() {
         scores.execution +
         scores.consistency +
         scores.profitFactor) /
-        6
+        6,
     );
 
     const totalPnl = closed.reduce((sum, t) => sum + t.netPnl, 0);
@@ -175,21 +194,69 @@ export default function AIInsightsPage() {
   }, [trades]);
 
   const radarData: RadarDimension[] = [
-    { dimension: "Win Rate", score: dynamicMetrics.scores.winRate, fullMark: 100 },
-    { dimension: "Risk Mgmt", score: dynamicMetrics.scores.riskMgmt, fullMark: 100 },
-    { dimension: "Consistency", score: dynamicMetrics.scores.consistency, fullMark: 100 },
-    { dimension: "Profit Factor", score: dynamicMetrics.scores.profitFactor, fullMark: 100 },
-    { dimension: "Discipline", score: dynamicMetrics.scores.discipline, fullMark: 100 },
-    { dimension: "Execution", score: dynamicMetrics.scores.execution, fullMark: 100 },
+    {
+      dimension: "Win Rate",
+      score: dynamicMetrics.scores.winRate,
+      fullMark: 100,
+    },
+    {
+      dimension: "Risk Mgmt",
+      score: dynamicMetrics.scores.riskMgmt,
+      fullMark: 100,
+    },
+    {
+      dimension: "Consistency",
+      score: dynamicMetrics.scores.consistency,
+      fullMark: 100,
+    },
+    {
+      dimension: "Profit Factor",
+      score: dynamicMetrics.scores.profitFactor,
+      fullMark: 100,
+    },
+    {
+      dimension: "Discipline",
+      score: dynamicMetrics.scores.discipline,
+      fullMark: 100,
+    },
+    {
+      dimension: "Execution",
+      score: dynamicMetrics.scores.execution,
+      fullMark: 100,
+    },
   ];
 
   const dimensionDetails = [
-    { label: "Discipline", score: dynamicMetrics.scores.discipline, color: "#6366f1" },
-    { label: "Consistency", score: dynamicMetrics.scores.consistency, color: "#6366f1" },
-    { label: "Execution", score: dynamicMetrics.scores.execution, color: "#6366f1" },
-    { label: "Win Rate", score: dynamicMetrics.scores.winRate, color: "#6366f1" },
-    { label: "Profit Factor", score: dynamicMetrics.scores.profitFactor, color: "#f59e0b" },
-    { label: "Risk Mgmt", score: dynamicMetrics.scores.riskMgmt, color: "#ef4444" },
+    {
+      label: "Discipline",
+      score: dynamicMetrics.scores.discipline,
+      color: "#6366f1",
+    },
+    {
+      label: "Consistency",
+      score: dynamicMetrics.scores.consistency,
+      color: "#6366f1",
+    },
+    {
+      label: "Execution",
+      score: dynamicMetrics.scores.execution,
+      color: "#6366f1",
+    },
+    {
+      label: "Win Rate",
+      score: dynamicMetrics.scores.winRate,
+      color: "#6366f1",
+    },
+    {
+      label: "Profit Factor",
+      score: dynamicMetrics.scores.profitFactor,
+      color: "#f59e0b",
+    },
+    {
+      label: "Risk Mgmt",
+      score: dynamicMetrics.scores.riskMgmt,
+      color: "#ef4444",
+    },
   ];
 
   // AI Data is now dynamically managed by State variables above.
@@ -241,14 +308,16 @@ export default function AIInsightsPage() {
             <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-4">
               <Brain size={32} className="text-[#6366f1] animate-pulse" />
             </div>
-            <h3 className="text-base font-bold text-gray-800">Apex Engine Scanning</h3>
+            <h3 className="text-base font-bold text-[var(--tz-text-primary)]">
+              Apex Engine Scanning
+            </h3>
             <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden mt-3 mb-2">
               <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
                 style={{ width: `${(analysisStep + 1) * 25}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 font-medium h-8 flex items-center justify-center">
+            <p className="text-xs text-[var(--tz-text-muted)] font-medium h-8 flex items-center justify-center">
               {
                 [
                   "Loading trade database...",
@@ -265,8 +334,8 @@ export default function AIInsightsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">AI Insights</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-xl font-bold text-[var(--tz-text-primary)]">AI Insights</h1>
+          <p className="text-sm text-[var(--tz-text-muted)] mt-0.5">
             Powered by machine learning to help you trade better
           </p>
         </div>
@@ -286,7 +355,10 @@ export default function AIInsightsPage() {
       {/* KPI Strip */}
       <div className="grid grid-cols-5 gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className="tz-card p-4 flex items-start gap-3 bg-white">
+          <div
+            key={k.label}
+            className="tz-card p-4 flex items-start gap-3 bg-[var(--tz-bg-card)]"
+          >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
               style={{ background: `${k.color}18`, color: k.color }}
@@ -294,11 +366,11 @@ export default function AIInsightsPage() {
               {k.icon}
             </div>
             <div>
-              <p className="text-xs text-gray-400 font-medium">{k.label}</p>
-              <p className="text-base font-bold text-gray-900 leading-tight mt-0.5">
+              <p className="text-xs text-[var(--tz-text-muted)] font-medium">{k.label}</p>
+              <p className="text-base font-bold text-[var(--tz-text-primary)] leading-tight mt-0.5">
                 {k.value}
               </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{k.sub}</p>
+              <p className="text-[10px] text-[var(--tz-text-muted)] mt-0.5">{k.sub}</p>
             </div>
           </div>
         ))}
@@ -306,7 +378,7 @@ export default function AIInsightsPage() {
 
       {/* Apex Score Card */}
       <div
-        className="tz-card p-6 bg-white"
+        className="tz-card p-6 bg-[var(--tz-bg-card)]"
         style={{
           background: "linear-gradient(135deg, #f8f7ff 0%, #f0f4ff 100%)",
         }}
@@ -315,12 +387,12 @@ export default function AIInsightsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Brain size={18} className="text-indigo-500" />
-              <h2 className="text-sm font-bold text-gray-800">Apex Score</h2>
+              <h2 className="text-sm font-bold text-[var(--tz-text-primary)]">Apex Score</h2>
               <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-100 text-indigo-600">
                 AI Powered
               </span>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--tz-text-muted)]">
               Composite score across 6 performance dimensions
             </p>
           </div>
@@ -380,14 +452,14 @@ export default function AIInsightsPage() {
                   position: "absolute",
                 }}
               >
-                <span className="text-4xl font-black text-gray-900 leading-none">
+                <span className="text-4xl font-black text-[var(--tz-text-primary)] leading-none">
                   {dynamicMetrics.zellaScore}
                 </span>
-                <span className="text-xs text-gray-400 font-medium">/100</span>
+                <span className="text-xs text-[var(--tz-text-muted)] font-medium">/100</span>
               </div>
             </div>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-xs text-gray-500">Score: </span>
+              <span className="text-xs text-[var(--tz-text-muted)]">Score: </span>
               <span
                 className="text-xs font-bold px-3 py-1 rounded-full"
                 style={{
@@ -416,7 +488,7 @@ export default function AIInsightsPage() {
 
           {/* Score breakdown */}
           <div className="flex flex-col justify-center gap-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-1">
+            <h3 className="text-xs font-bold text-[var(--tz-text-secondary)] mb-1">
               Score Breakdown
             </h3>
             {dimensionDetails.map((d) => {
@@ -430,7 +502,7 @@ export default function AIInsightsPage() {
                       : "#ef4444";
               return (
                 <div key={d.label} className="flex items-center gap-3">
-                  <span className="text-xs text-gray-600 w-28 shrink-0">
+                  <span className="text-xs text-[var(--tz-text-secondary)] w-28 shrink-0">
                     {d.label}
                   </span>
                   <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
@@ -455,7 +527,10 @@ export default function AIInsightsPage() {
       {/* Insights Row */}
       <div className="grid grid-cols-3 gap-3">
         {/* Strengths */}
-        <div className="tz-card p-5 bg-white border-l-4" style={{ borderLeftColor: "#1a8a72" }}>
+        <div
+          className="tz-card p-5 bg-[var(--tz-bg-card)] border-l-4"
+          style={{ borderLeftColor: "#1a8a72" }}
+        >
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -464,8 +539,10 @@ export default function AIInsightsPage() {
               <TrendingUp size={15} color="#1a8a72" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-800">Your Strengths</h3>
-              <p className="text-xs text-gray-400">What you do well</p>
+              <h3 className="text-sm font-bold text-[var(--tz-text-primary)]">
+                Your Strengths
+              </h3>
+              <p className="text-xs text-[var(--tz-text-muted)]">What you do well</p>
             </div>
           </div>
           <div className="flex flex-col gap-3">
@@ -480,7 +557,7 @@ export default function AIInsightsPage() {
                   className="mt-0.5 shrink-0"
                   style={{ color: "#1a8a72" }}
                 />
-                <span className="text-xs text-gray-600 leading-relaxed">
+                <span className="text-xs text-[var(--tz-text-secondary)] leading-relaxed">
                   {item}
                 </span>
               </div>
@@ -489,7 +566,10 @@ export default function AIInsightsPage() {
         </div>
 
         {/* Weaknesses */}
-        <div className="tz-card p-5 bg-white border-l-4" style={{ borderLeftColor: "#ef5350" }}>
+        <div
+          className="tz-card p-5 bg-[var(--tz-bg-card)] border-l-4"
+          style={{ borderLeftColor: "#ef5350" }}
+        >
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -498,8 +578,10 @@ export default function AIInsightsPage() {
               <TrendingDown size={15} color="#ef5350" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-800">Areas to Improve</h3>
-              <p className="text-xs text-gray-400">Focus areas for growth</p>
+              <h3 className="text-sm font-bold text-[var(--tz-text-primary)]">
+                Areas to Improve
+              </h3>
+              <p className="text-xs text-[var(--tz-text-muted)]">Focus areas for growth</p>
             </div>
           </div>
           <div className="flex flex-col gap-3">
@@ -514,7 +596,7 @@ export default function AIInsightsPage() {
                   className="mt-0.5 shrink-0"
                   style={{ color: "#ef5350" }}
                 />
-                <span className="text-xs text-gray-600 leading-relaxed">
+                <span className="text-xs text-[var(--tz-text-secondary)] leading-relaxed">
                   {item}
                 </span>
               </div>
@@ -523,7 +605,10 @@ export default function AIInsightsPage() {
         </div>
 
         {/* Opportunities */}
-        <div className="tz-card p-5 bg-white border-l-4" style={{ borderLeftColor: "#3b82f6" }}>
+        <div
+          className="tz-card p-5 bg-[var(--tz-bg-card)] border-l-4"
+          style={{ borderLeftColor: "#3b82f6" }}
+        >
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -532,8 +617,8 @@ export default function AIInsightsPage() {
               <Lightbulb size={15} color="#3b82f6" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-800">Opportunities</h3>
-              <p className="text-xs text-gray-400">Untapped potential</p>
+              <h3 className="text-sm font-bold text-[var(--tz-text-primary)]">Opportunities</h3>
+              <p className="text-xs text-[var(--tz-text-muted)]">Untapped potential</p>
             </div>
           </div>
           <div className="flex flex-col gap-3">
@@ -548,7 +633,7 @@ export default function AIInsightsPage() {
                   className="mt-0.5 shrink-0"
                   style={{ color: "#3b82f6" }}
                 />
-                <span className="text-xs text-gray-600 leading-relaxed">
+                <span className="text-xs text-[var(--tz-text-secondary)] leading-relaxed">
                   {item}
                 </span>
               </div>
@@ -560,10 +645,12 @@ export default function AIInsightsPage() {
       {/* Pattern Recognition + Correlation */}
       <div className="grid grid-cols-2 gap-3">
         {/* Pattern Recognition */}
-        <div className="tz-card p-5 bg-white">
+        <div className="tz-card p-5 bg-[var(--tz-bg-card)]">
           <div className="flex items-center gap-2 mb-4">
             <Target size={16} className="text-indigo-500" />
-            <h3 className="text-sm font-bold text-gray-800">Detected Patterns</h3>
+            <h3 className="text-sm font-bold text-[var(--tz-text-primary)]">
+              Detected Patterns
+            </h3>
           </div>
           <div className="flex flex-col gap-3">
             {patterns.map((p) => {
@@ -576,10 +663,10 @@ export default function AIInsightsPage() {
               return (
                 <div
                   key={p.name}
-                  className="p-3 rounded-lg border border-gray-100 bg-[#fafbfc]"
+                  className="p-3 rounded-lg border border-[var(--tz-border-subtle)] bg-[#fafbfc]"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-gray-700">
+                    <span className="text-xs font-semibold text-[var(--tz-text-secondary)]">
                       {p.name}
                     </span>
                     <span
@@ -609,7 +696,7 @@ export default function AIInsightsPage() {
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-[var(--tz-text-muted)]">
                       {p.occurrences} occurrences
                     </span>
                     <span
@@ -626,47 +713,47 @@ export default function AIInsightsPage() {
         </div>
 
         {/* Correlation Analysis */}
-        <div className="tz-card p-5 bg-white">
+        <div className="tz-card p-5 bg-[var(--tz-bg-card)]">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 size={16} className="text-indigo-500" />
-            <h3 className="text-sm font-bold text-gray-800">
+            <h3 className="text-sm font-bold text-[var(--tz-text-primary)]">
               Correlation Analysis
             </h3>
           </div>
-          <div className="overflow-hidden rounded-lg border border-gray-100">
+          <div className="overflow-hidden rounded-lg border border-[var(--tz-border-subtle)]">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-slate-50 border-b border-gray-100">
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-400">
+                <tr className="bg-slate-50 border-b border-[var(--tz-border-subtle)]">
+                  <th className="px-3 py-2.5 text-left font-semibold text-[var(--tz-text-muted)]">
                     Factor
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-400">
+                  <th className="px-3 py-2.5 text-left font-semibold text-[var(--tz-text-muted)]">
                     Condition
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-400">
+                  <th className="px-3 py-2.5 text-left font-semibold text-[var(--tz-text-muted)]">
                     Win Rate
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-400">
+                  <th className="px-3 py-2.5 text-left font-semibold text-[var(--tz-text-muted)]">
                     Avg P&L
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {correlations.map((c, i) => (
+                {correlations.map((c, _i) => (
                   <tr
                     key={`${c.factor}-${c.condition}`}
-                    className="hover:bg-gray-50 border-b border-slate-50 last:border-0 transition-colors"
+                    className="hover:bg-[var(--tz-hover-bg)] border-b border-slate-50 last:border-0 transition-colors"
                   >
-                    <td className="px-3 py-2.5 text-gray-500 font-medium">
+                    <td className="px-3 py-2.5 text-[var(--tz-text-muted)] font-medium">
                       {c.factor}
                     </td>
-                    <td className="px-3 py-2.5 text-gray-700">{c.condition}</td>
+                    <td className="px-3 py-2.5 text-[var(--tz-text-secondary)]">{c.condition}</td>
                     <td className="px-3 py-2.5">
                       <span
                         className="font-semibold"
                         style={{
                           color:
-                            parseInt(c.winRate) >= 60
+                            parseInt(c.winRate, 10) >= 60
                               ? "#1a8a72"
                               : "#ef5350",
                         }}
@@ -691,15 +778,15 @@ export default function AIInsightsPage() {
       </div>
 
       {/* AI Recommendations */}
-      <div className="tz-card p-5 bg-white">
+      <div className="tz-card p-5 bg-[var(--tz-bg-card)]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-indigo-500" />
-            <h3 className="text-sm font-bold text-gray-800">
+            <h3 className="text-sm font-bold text-[var(--tz-text-primary)]">
               AI Recommendations
             </h3>
           </div>
-          <span className="text-xs text-gray-400">Updated today</span>
+          <span className="text-xs text-[var(--tz-text-muted)]">Updated today</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {recommendations.map((rec) => {
@@ -732,10 +819,10 @@ export default function AIInsightsPage() {
                     {rec.icon}
                   </div>
                 </div>
-                <h4 className="text-xs font-bold text-gray-800 mb-2 leading-snug">
+                <h4 className="text-xs font-bold text-[var(--tz-text-primary)] mb-2 leading-snug">
                   {rec.title}
                 </h4>
-                <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                <p className="text-xs text-[var(--tz-text-muted)] leading-relaxed mb-3">
                   {rec.description}
                 </p>
                 <div

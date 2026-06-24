@@ -1,28 +1,32 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
 import {
-  Plus,
+  Archive,
+  BarChart2,
+  BookOpen,
   Edit2,
   ExternalLink,
-  BookOpen,
-  TrendingUp,
-  TrendingDown,
-  BarChart2,
-  Archive,
+  Plus,
   RotateCcw,
+  TrendingUp,
 } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
+import { useEffect, useMemo, useState } from "react";
+import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
+import { toast } from "sonner";
+import {
+  createPlaybookAction,
+  getPlaybooksAction,
+  updatePlaybookAction,
+} from "@/app/actions/playbooks";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Playbook } from "@/lib/data";
-import { toast } from "sonner";
-import { getPlaybooksAction, createPlaybookAction, updatePlaybookAction } from "@/app/actions/playbooks";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Playbook } from "@/lib/data";
 
 const COLOR_OPTIONS = [
   "#6366f1", // indigo
@@ -38,14 +42,17 @@ const COLOR_OPTIONS = [
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   const isPositive = data.length > 0 ? data[data.length - 1] >= 0 : true;
   const lineColor = isPositive ? color : "#ef5350";
-  
+
   const formattedData = useMemo(() => {
     return data.map((v, i) => ({ t: i, v }));
   }, [data]);
 
   return (
     <ResponsiveContainer width="100%" height={44}>
-      <LineChart data={formattedData} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+      <LineChart
+        data={formattedData}
+        margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+      >
         <Line
           type="monotone"
           dataKey="v"
@@ -80,10 +87,10 @@ function PlaybookCard({
   onToggleArchive: (id: number) => void;
 }) {
   const isActive = pb.active;
-  
+
   return (
     <div
-      className="tz-card overflow-hidden cursor-pointer hover:shadow-md transition-all bg-white flex flex-col justify-between"
+      className="tz-card overflow-hidden cursor-pointer hover:shadow-md transition-all bg-[var(--tz-bg-card)] flex flex-col justify-between"
       style={{ borderLeft: `4px solid ${pb.color}` }}
     >
       {/* Header */}
@@ -109,7 +116,7 @@ function PlaybookCard({
             <BookOpen size={13} style={{ color: pb.color }} />
           </div>
         </div>
-        <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 h-8">
+        <p className="text-xs text-[var(--tz-text-muted)] leading-relaxed line-clamp-2 h-8">
           {pb.description}
         </p>
       </div>
@@ -126,9 +133,7 @@ function PlaybookCard({
       </div>
 
       {/* Stats */}
-      <div
-        className="px-5 py-3 grid grid-cols-4 gap-2 bg-[#fafbfc]"
-      >
+      <div className="px-5 py-3 grid grid-cols-4 gap-2 bg-[#fafbfc]">
         {[
           {
             label: "Win Rate",
@@ -151,7 +156,7 @@ function PlaybookCard({
           },
         ].map((s) => (
           <div key={s.label} className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+            <span className="text-[10px] font-bold text-[var(--tz-text-muted)] uppercase tracking-wide">
               {s.label}
             </span>
             <span
@@ -172,20 +177,18 @@ function PlaybookCard({
       </div>
 
       {/* Footer */}
-      <div
-        className="flex items-center justify-between px-5 py-3 border-t border-slate-50"
-      >
+      <div className="flex items-center justify-between px-5 py-3 border-t border-slate-50">
         <div className="flex gap-3">
           <button
             onClick={() => onEdit(pb)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-indigo-600 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--tz-text-muted)] hover:text-indigo-600 transition-colors cursor-pointer"
           >
             <Edit2 size={12} />
             Edit
           </button>
           <button
             onClick={() => onToggleArchive(pb.id)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--tz-text-muted)] hover:text-[var(--tz-text-secondary)] transition-colors cursor-pointer"
           >
             {isActive ? (
               <>
@@ -242,7 +245,7 @@ function CreatePlaybookModal({
       setDescription("");
       setColor(COLOR_OPTIONS[0]);
     }
-  }, [playbookToEdit, open]);
+  }, [playbookToEdit]);
 
   function handleSave() {
     onSave({
@@ -258,9 +261,9 @@ function CreatePlaybookModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden bg-white">
+      <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden bg-[var(--tz-bg-card)]">
         {/* Modal Header */}
-        <DialogHeader className="px-6 py-4 border-b border-gray-100 shrink-0">
+        <DialogHeader className="px-6 py-4 border-b border-[var(--tz-border-subtle)] shrink-0">
           <div className="flex items-center gap-2">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
@@ -268,7 +271,7 @@ function CreatePlaybookModal({
             >
               <BookOpen size={15} style={{ color }} />
             </div>
-            <DialogTitle className="text-sm font-bold text-gray-900">
+            <DialogTitle className="text-sm font-bold text-[var(--tz-text-primary)]">
               {playbookToEdit ? "Edit Playbook" : "Create New Playbook"}
             </DialogTitle>
           </div>
@@ -278,20 +281,20 @@ function CreatePlaybookModal({
         <div className="px-6 py-5 flex flex-col gap-4 max-h-[60vh] overflow-y-auto shrink-0">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-600">
+            <label className="text-xs font-semibold text-[var(--tz-text-secondary)]">
               Playbook Name *
             </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Breakout, VWAP Rejection…"
-              className="h-9 px-3 rounded-lg text-xs border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-gray-300 font-medium text-gray-800"
+              className="h-9 px-3 rounded-lg text-xs border border-[var(--tz-border)] bg-[var(--tz-bg-card)] focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-gray-300 font-medium text-[var(--tz-text-primary)]"
             />
           </div>
 
           {/* Description */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-600">
+            <label className="text-xs font-semibold text-[var(--tz-text-secondary)]">
               Description
             </label>
             <textarea
@@ -299,13 +302,13 @@ function CreatePlaybookModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Briefly describe this strategy…"
               rows={3}
-              className="px-3 py-2 rounded-lg text-xs border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-gray-300 resize-none font-medium text-gray-800"
+              className="px-3 py-2 rounded-lg text-xs border border-[var(--tz-border)] bg-[var(--tz-bg-card)] focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-gray-300 resize-none font-medium text-[var(--tz-text-primary)]"
             />
           </div>
 
           {/* Color */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-600">
+            <label className="text-xs font-semibold text-[var(--tz-text-secondary)]">
               Card Color
             </label>
             <div className="flex items-center gap-2">
@@ -321,7 +324,7 @@ function CreatePlaybookModal({
                   }}
                 />
               ))}
-              <span className="text-[10px] text-gray-400 ml-1 font-mono">
+              <span className="text-[10px] text-[var(--tz-text-muted)] ml-1 font-mono">
                 Selected: {color}
               </span>
             </div>
@@ -329,10 +332,10 @@ function CreatePlaybookModal({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-row items-center justify-end gap-2 shrink-0">
+        <DialogFooter className="px-6 py-4 border-t border-[var(--tz-border-subtle)] bg-[var(--tz-hover-bg)]/50 flex flex-row items-center justify-end gap-2 shrink-0">
           <button
             onClick={onClose}
-            className="px-4 h-8 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+            className="px-4 h-8 rounded-lg text-xs font-medium border border-[var(--tz-border)] bg-[var(--tz-bg-card)] text-[var(--tz-text-secondary)] hover:bg-[var(--tz-hover-bg)] transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -356,34 +359,45 @@ function CreatePlaybookModal({
 
 export default function PlaybooksPage() {
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
-  const [activeTab, setActiveTab] = useState<"All" | "Active" | "Archived">("All");
+  const [activeTab, setActiveTab] = useState<"All" | "Active" | "Archived">(
+    "All",
+  );
   const [showCreate, setShowCreate] = useState(false);
   const [playbookToEdit, setPlaybookToEdit] = useState<Playbook | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Sync state across navigations
   useEffect(() => {
     getPlaybooksAction().then((data) => {
       setPlaybooks(data as any);
+      setIsLoading(false);
     });
   }, []);
 
-  const handleCreateOrEditPlaybook = async (playbookData: Partial<Playbook>) => {
+  const handleCreateOrEditPlaybook = async (
+    playbookData: Partial<Playbook>,
+  ) => {
     try {
       if (playbookToEdit) {
         // Edit mode
-        const updatedResponse = await updatePlaybookAction(String(playbookToEdit.id), {
-          name: playbookData.name,
-          description: playbookData.description,
-          color: playbookData.color,
-        });
-        
-        setPlaybooks((prev) => prev.map((p) => {
-          if (p.id === playbookToEdit.id) {
-            return { ...p, ...updatedResponse };
-          }
-          return p;
-        }));
-        
+        const updatedResponse = await updatePlaybookAction(
+          String(playbookToEdit.id),
+          {
+            name: playbookData.name,
+            description: playbookData.description,
+            color: playbookData.color,
+          },
+        );
+
+        setPlaybooks((prev) =>
+          prev.map((p) => {
+            if (p.id === playbookToEdit.id) {
+              return { ...p, ...updatedResponse };
+            }
+            return p;
+          }),
+        );
+
         toast.success(`Playbook "${playbookData.name}" updated successfully!`);
       } else {
         // Create mode
@@ -392,7 +406,7 @@ export default function PlaybooksPage() {
           description: playbookData.description || "",
           color: playbookData.color || COLOR_OPTIONS[0],
         });
-        
+
         setPlaybooks((prev) => [newPlaybook as any, ...prev]);
         toast.success(`Playbook "${playbookData.name}" created successfully!`);
       }
@@ -405,19 +419,21 @@ export default function PlaybooksPage() {
 
   const handleToggleArchive = async (id: number) => {
     try {
-      const pb = playbooks.find(p => p.id === id);
+      const pb = playbooks.find((p) => p.id === id);
       if (!pb) return;
       const nextActive = !pb.active;
-      
+
       await updatePlaybookAction(String(id), { active: nextActive });
-      
-      setPlaybooks((prev) => prev.map((p) => {
-        if (p.id === id) {
-          return { ...p, active: nextActive };
-        }
-        return p;
-      }));
-      
+
+      setPlaybooks((prev) =>
+        prev.map((p) => {
+          if (p.id === id) {
+            return { ...p, active: nextActive };
+          }
+          return p;
+        }),
+      );
+
       if (nextActive) {
         toast.success(`Playbook "${pb.name}" restored to active!`);
       } else {
@@ -441,20 +457,27 @@ export default function PlaybooksPage() {
 
   const stats = useMemo(() => {
     const activePbs = playbooks.filter((p) => p.active);
-    
+
     // Find best performing playbook
-    const best = playbooks.length > 0
-      ? playbooks.reduce((prev, curr) => (curr.totalPnl > prev.totalPnl ? curr : prev))
-      : { name: "None", totalPnl: 0 };
+    const best =
+      playbooks.length > 0
+        ? playbooks.reduce((prev, curr) =>
+            curr.totalPnl > prev.totalPnl ? curr : prev,
+          )
+        : { name: "None", totalPnl: 0 };
 
     // Find most used playbook
-    const most = playbooks.length > 0
-      ? playbooks.reduce((prev, curr) => (curr.trades > prev.trades ? curr : prev))
-      : { name: "None", trades: 0 };
+    const most =
+      playbooks.length > 0
+        ? playbooks.reduce((prev, curr) =>
+            curr.trades > prev.trades ? curr : prev,
+          )
+        : { name: "None", trades: 0 };
 
-    const avgWin = playbooks.length > 0
-      ? playbooks.reduce((sum, p) => sum + p.winRate, 0) / playbooks.length
-      : 0;
+    const avgWin =
+      playbooks.length > 0
+        ? playbooks.reduce((sum, p) => sum + p.winRate, 0) / playbooks.length
+        : 0;
 
     return [
       {
@@ -488,15 +511,40 @@ export default function PlaybooksPage() {
     ];
   }, [playbooks]);
 
-  const tabs: Array<"All" | "Active" | "Archived"> = ["All", "Active", "Archived"];
+  const tabs: Array<"All" | "Active" | "Archived"> = [
+    "All",
+    "Active",
+    "Archived",
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="tz-page animate-pulse space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-48 rounded-xl" />
+          <Skeleton className="h-9 w-32 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tz-page">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Playbooks</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-xl font-bold text-[var(--tz-text-primary)]">Playbooks</h1>
+          <p className="text-sm text-[var(--tz-text-muted)] mt-0.5">
             Define and track your trading strategies
           </p>
         </div>
@@ -518,7 +566,10 @@ export default function PlaybooksPage() {
       {/* Stats Strip */}
       <div className="grid grid-cols-4 gap-3">
         {stats.map((s) => (
-          <div key={s.label} className="tz-card p-4 flex items-start gap-3 bg-white">
+          <div
+            key={s.label}
+            className="tz-card p-4 flex items-start gap-3 bg-[var(--tz-bg-card)]"
+          >
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
               style={{ background: `${s.color}18`, color: s.color }}
@@ -526,20 +577,20 @@ export default function PlaybooksPage() {
               {s.icon}
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-gray-400 font-medium">{s.label}</p>
-              <p className="text-sm font-bold text-gray-900 leading-tight mt-0.5 truncate">
+              <p className="text-xs text-[var(--tz-text-muted)] font-medium">{s.label}</p>
+              <p className="text-sm font-bold text-[var(--tz-text-primary)] leading-tight mt-0.5 truncate">
                 {s.value}
               </p>
-              <p className="text-[10px] text-gray-400 mt-0.5 font-medium">{s.sub}</p>
+              <p className="text-[10px] text-[var(--tz-text-muted)] mt-0.5 font-medium">
+                {s.sub}
+              </p>
             </div>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div
-        className="flex items-center gap-0 border-b border-slate-200"
-      >
+      <div className="flex items-center gap-0 border-b border-slate-200">
         {tabs.map((tab) => {
           const count =
             tab === "All"
@@ -578,16 +629,14 @@ export default function PlaybooksPage() {
 
       {/* Playbook Grid */}
       {filtered.length === 0 ? (
-        <div className="tz-card flex flex-col items-center justify-center py-16 gap-3 bg-white">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-100"
-          >
-            <Archive size={22} className="text-gray-400" />
+        <div className="tz-card flex flex-col items-center justify-center py-16 gap-3 bg-[var(--tz-bg-card)]">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-100">
+            <Archive size={22} className="text-[var(--tz-text-muted)]" />
           </div>
-          <p className="text-sm font-semibold text-gray-500">
+          <p className="text-sm font-semibold text-[var(--tz-text-muted)]">
             No {activeTab.toLowerCase()} playbooks
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-[var(--tz-text-muted)]">
             {activeTab === "Archived"
               ? "Archived playbooks will appear here."
               : "Create your first playbook to get started."}

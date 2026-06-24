@@ -1,71 +1,135 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { getPreferencesAction } from "@/app/actions/settings";
 
-export function AppearanceProvider({ children }: { children: React.ReactNode }) {
-  const [accent, setAccent] = useState("#6366f1"); // Default Indigo
-  const [theme, setTheme] = useState("Light");
-  const [layout, setLayout] = useState("Comfortable");
+interface AppearanceState {
+  theme: "Light" | "Dark" | "System";
+  accent: string;
+  layout: "Compact" | "Comfortable" | "Spacious";
+}
 
+const DEFAULTS: AppearanceState = {
+  theme: "Light",
+  accent: "#6366f1",
+  layout: "Comfortable",
+};
+
+function getSystemTheme(): "Light" | "Dark" {
+  if (typeof window === "undefined") return "Light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "Dark"
+    : "Light";
+}
+
+export function AppearanceProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [state, setState] = useState<AppearanceState>(DEFAULTS);
+  const [mounted, setMounted] = useState(false);
+
+  // Read from localStorage first (instant), then sync from Supabase
   useEffect(() => {
-    const syncAppearance = () => {
-      setAccent(localStorage.getItem("tz_accent") || "#6366f1");
-      setTheme(localStorage.getItem("tz_theme") || "Light");
-      setLayout(localStorage.getItem("tz_layout") || "Comfortable");
+    // 1. Instant load from localStorage
+    const localTheme = localStorage.getItem("tz_theme") as AppearanceState["theme"] | null;
+    const localAccent = localStorage.getItem("tz_accent");
+    const localLayout = localStorage.getItem("tz_layout") as AppearanceState["layout"] | null;
+
+    const initialState: AppearanceState = {
+      theme: localTheme || DEFAULTS.theme,
+      accent: localAccent || DEFAULTS.accent,
+      layout: localLayout || DEFAULTS.layout,
     };
+    setState(initialState);
+    setMounted(true);
 
-    // Initial load
-    syncAppearance();
+    // 2. Background sync from Supabase (source of truth)
+    getPreferencesAction()
+      .then((prefs) => {
+        if (prefs && Object.keys(prefs).length > 0) {
+          const dbState: AppearanceState = {
+            theme: prefs.tz_theme || initialState.theme,
+            accent: prefs.tz_accent || initialState.accent,
+            layout: prefs.tz_layout || initialState.layout,
+          };
+          setState(dbState);
+          // Sync DB values to localStorage for next instant load
+          localStorage.setItem("tz_theme", dbState.theme);
+          localStorage.setItem("tz_accent", dbState.accent);
+          localStorage.setItem("tz_layout", dbState.layout);
+        }
+      })
+      .catch(() => {
+        // Silently fail — localStorage values are fine as fallback
+      });
+  }, []);
 
-    // Listen for custom events triggered by settings page
-    window.addEventListener("tz_appearance_change", syncAppearance);
-    return () => window.removeEventListener("tz_appearance_change", syncAppearance);
+  // Listen for settings page changes (custom event)
+  const handleAppearanceChange = useCallback(() => {
+    const newState: AppearanceState = {
+      theme: (localStorage.getItem("tz_theme") as AppearanceState["theme"]) || DEFAULTS.theme,
+      accent: localStorage.getItem("tz_accent") || DEFAULTS.accent,
+      layout: (localStorage.getItem("tz_layout") as AppearanceState["layout"]) || DEFAULTS.layout,
+    };
+    setState(newState);
   }, []);
 
   useEffect(() => {
-    // Apply Theme
-    if (theme === "Dark") {
+    window.addEventListener("tz_appearance_change", handleAppearanceChange);
+    return () =>
+      window.removeEventListener("tz_appearance_change", handleAppearanceChange);
+  }, [handleAppearanceChange]);
+
+  // Listen for system theme changes when theme is "System"
+  useEffect(() => {
+    if (state.theme !== "System") return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => setState((s) => ({ ...s })); // trigger re-render
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [state.theme]);
+
+  // Apply theme to DOM
+  useEffect(() => {
+    if (!mounted) return;
+
+    const resolvedTheme =
+      state.theme === "System" ? getSystemTheme() : state.theme;
+
+    if (resolvedTheme === "Dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
 
-    // Apply Layout
-    document.body.classList.remove("layout-compact", "layout-comfortable", "layout-spacious");
-    document.body.classList.add(`layout-${layout.toLowerCase()}`);
-  }, [theme, layout]);
+    // Apply layout density
+    document.body.classList.remove(
+      "layout-compact",
+      "layout-comfortable",
+      "layout-spacious",
+    );
+    document.body.classList.add(`layout-${state.layout.toLowerCase()}`);
+  }, [state.theme, state.layout, mounted]);
+
+  // CSS variable overrides for accent color
+  const accentCSS = mounted
+    ? `
+    :root {
+      --tz-accent: ${state.accent};
+      --tz-accent-muted: ${state.accent}20;
+    }
+    .dark {
+      --tz-accent: ${state.accent};
+      --tz-accent-muted: ${state.accent}25;
+    }
+  `
+    : "";
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          /* CSS Variables Override */
-          :root {
-            --theme-accent: ${accent};
-          }
-          
-          /* Force Tailwind overrides for the dynamic accent */
-          .text-indigo-600 { color: ${accent} !important; }
-          .bg-indigo-600 { background-color: ${accent} !important; }
-          .border-indigo-600 { border-color: ${accent} !important; }
-          .hover\\:text-indigo-600:hover { color: ${accent} !important; }
-          .hover\\:bg-indigo-50:hover { background-color: ${accent}15 !important; }
-          .focus\\:ring-indigo-500:focus { --tw-ring-color: ${accent} !important; box-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color) !important; }
-          
-          /* Custom App Components Override */
-          .tz-btn-primary {
-            background: linear-gradient(135deg, ${accent} 0%, ${accent}dd 100%) !important;
-          }
-          .tz-tab-active {
-            border-bottom-color: ${accent} !important;
-            color: ${accent} !important;
-          }
-          .tz-nav-item.active {
-            background: ${accent}25 !important;
-            color: ${accent} !important;
-          }
-        `
-      }} />
+      {mounted && <style dangerouslySetInnerHTML={{ __html: accentCSS }} />}
       {children}
     </>
   );

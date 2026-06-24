@@ -1,25 +1,25 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { Info, TrendingUp, Zap } from "lucide-react";
+import { Info, Zap } from "lucide-react";
+import { useMemo } from "react";
 import {
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  ResponsiveContainer,
   Area,
   AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  BarChart,
-  Bar,
-  Cell,
-  ReferenceLine,
 } from "recharts";
-import { Trade } from "@/lib/data";
+import type { Trade } from "@/lib/data";
 
 // ─── Apex Score (Radar Chart) ─────────────────────────────────────────────
 export function ZellaScoreCard({ trades }: { trades: Trade[] }) {
@@ -32,7 +32,7 @@ export function ZellaScoreCard({ trades }: { trades: Trade[] }) {
 
     const grossProfit = wins.reduce((sum, t) => sum + t.netPnl, 0);
     const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.netPnl, 0));
-    
+
     let profitFactor = 0;
     if (grossLoss > 0) {
       profitFactor = grossProfit / grossLoss;
@@ -59,10 +59,10 @@ export function ZellaScoreCard({ trades }: { trades: Trade[] }) {
   }, [trades]);
 
   return (
-    <div className="tz-card flex flex-col p-4 h-full bg-white">
+    <div className="tz-card flex flex-col p-4 h-full bg-[var(--tz-bg-card)]">
       <div className="flex items-center gap-1 mb-2">
-        <span className="text-sm font-semibold text-gray-800">Apex Score</span>
-        <Info size={13} className="text-gray-400 cursor-help" />
+        <span className="text-sm font-semibold text-[var(--tz-text-primary)]">Apex Score</span>
+        <Info size={13} className="text-[var(--tz-text-muted)] cursor-help" />
       </div>
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <ResponsiveContainer width="100%" height={180}>
@@ -87,7 +87,9 @@ export function ZellaScoreCard({ trades }: { trades: Trade[] }) {
         </ResponsiveContainer>
       </div>
       <div className="flex items-center gap-1.5 mt-2 border-t border-gray-50 pt-2 shrink-0">
-        <span className="text-xs text-gray-500 font-semibold">Your Apex Score:</span>
+        <span className="text-xs text-[var(--tz-text-muted)] font-semibold">
+          Your Apex Score:
+        </span>
         <span className="text-base font-extrabold" style={{ color: "#26a69a" }}>
           {stats.overallScore}
         </span>
@@ -107,7 +109,7 @@ const CustomCumulativeTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const v = payload[0].value;
     return (
-      <div className="bg-white border border-gray-200 rounded-lg shadow-md px-3 py-2 text-xs">
+      <div className="bg-white border border-[var(--tz-border)] rounded-lg shadow-md px-3 py-2 text-xs">
         <p
           className="font-bold font-mono"
           style={{ color: v >= 0 ? "#26a69a" : "#ef5350" }}
@@ -123,7 +125,7 @@ const CustomCumulativeTooltip = ({ active, payload }: any) => {
 export function CumulativePnLCard({ trades }: { trades: Trade[] }) {
   const chartData = useMemo(() => {
     const closed = trades.filter((t) => t.status === "Closed");
-    
+
     // Sort chronologically
     const sorted = [...closed].sort((a, b) => {
       const d = a.date.localeCompare(b.date);
@@ -143,12 +145,12 @@ export function CumulativePnLCard({ trades }: { trades: Trade[] }) {
   }, [trades]);
 
   return (
-    <div className="tz-card flex flex-col p-4 h-full bg-white">
+    <div className="tz-card flex flex-col p-4 h-full bg-[var(--tz-bg-card)]">
       <div className="flex items-center gap-1 mb-2">
-        <span className="text-sm font-semibold text-gray-800">
+        <span className="text-sm font-semibold text-[var(--tz-text-primary)]">
           Daily Net Cumulative P&L
         </span>
-        <Info size={13} className="text-gray-400 cursor-help" />
+        <Info size={13} className="text-[var(--tz-text-muted)] cursor-help" />
       </div>
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height={210}>
@@ -187,8 +189,8 @@ export function CumulativePnLCard({ trades }: { trades: Trade[] }) {
               stroke="#26a69a"
               strokeWidth={2}
               fill="url(#pnlGradientPos)"
-              dot={false}
-              activeDot={{ r: 4, fill: "#26a69a" }}
+              dot={{ r: 3, fill: "#26a69a", strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: "#26a69a" }}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -202,7 +204,7 @@ const CustomDailyTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const v = payload[0].value;
     return (
-      <div className="bg-white border border-gray-200 rounded-lg shadow-md px-3 py-2 text-xs">
+      <div className="bg-white border border-[var(--tz-border)] rounded-lg shadow-md px-3 py-2 text-xs">
         <p
           className="font-bold font-mono"
           style={{ color: v >= 0 ? "#26a69a" : "#ef5350" }}
@@ -218,7 +220,7 @@ const CustomDailyTooltip = ({ active, payload }: any) => {
 export function NetDailyPnLCard({ trades }: { trades: Trade[] }) {
   const chartData = useMemo(() => {
     const closed = trades.filter((t) => t.status === "Closed");
-    
+
     // Sort chronologically
     const sorted = [...closed].sort((a, b) => {
       const d = a.date.localeCompare(b.date);
@@ -240,12 +242,12 @@ export function NetDailyPnLCard({ trades }: { trades: Trade[] }) {
   }, [trades]);
 
   return (
-    <div className="tz-card flex flex-col p-4 h-full bg-white">
+    <div className="tz-card flex flex-col p-4 h-full bg-[var(--tz-bg-card)]">
       <div className="flex items-center gap-1 mb-2">
-        <span className="text-sm font-semibold text-gray-800">
+        <span className="text-sm font-semibold text-[var(--tz-text-primary)]">
           Net Daily P&L
         </span>
-        <Info size={13} className="text-gray-400 cursor-help" />
+        <Info size={13} className="text-[var(--tz-text-muted)] cursor-help" />
       </div>
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height={210}>
@@ -292,7 +294,10 @@ export function NetDailyPnLCard({ trades }: { trades: Trade[] }) {
 export function PlaybookPerformance({ trades }: { trades: Trade[] }) {
   const playbookStats = useMemo(() => {
     const closed = trades.filter((t) => t.status === "Closed");
-    const statsMap: Record<string, { pnl: number; wins: number; total: number }> = {};
+    const statsMap: Record<
+      string,
+      { pnl: number; wins: number; total: number }
+    > = {};
 
     for (const t of closed) {
       const name = t.playbook || "Unclassified";
@@ -317,28 +322,39 @@ export function PlaybookPerformance({ trades }: { trades: Trade[] }) {
   }, [trades]);
 
   return (
-    <div className="tz-card bg-white p-4">
+    <div className="tz-card bg-[var(--tz-bg-card)] p-4">
       <div className="flex items-center gap-1.5 mb-3">
         <Zap size={14} className="text-indigo-600 animate-pulse" />
-        <span className="text-sm font-bold text-gray-800">Playbook Performance</span>
+        <span className="text-sm font-bold text-[var(--tz-text-primary)]">
+          Playbook Performance
+        </span>
       </div>
       <div className="space-y-3">
         {playbookStats.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-6">No classified playbook stats yet.</p>
+          <p className="text-xs text-[var(--tz-text-muted)] text-center py-6">
+            No classified playbook stats yet.
+          </p>
         ) : (
           playbookStats.slice(0, 5).map((pb) => {
             const isPos = pb.pnl >= 0;
             return (
               <div key={pb.name} className="space-y-1 text-xs">
                 <div className="flex justify-between items-center font-medium">
-                  <span className="text-gray-800 font-bold">{pb.name}</span>
-                  <span className="font-bold" style={{ color: isPos ? "#26a69a" : "#ef5350" }}>
+                  <span className="text-[var(--tz-text-primary)] font-bold">{pb.name}</span>
+                  <span
+                    className="font-bold"
+                    style={{ color: isPos ? "#26a69a" : "#ef5350" }}
+                  >
                     {isPos ? "+" : ""}${pb.pnl.toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-[10px] text-gray-400">
-                  <span>{pb.totalTrades} {pb.totalTrades === 1 ? "trade" : "trades"}</span>
-                  <span className="font-mono">{pb.winRate.toFixed(0)}% win rate</span>
+                <div className="flex justify-between text-[10px] text-[var(--tz-text-muted)]">
+                  <span>
+                    {pb.totalTrades} {pb.totalTrades === 1 ? "trade" : "trades"}
+                  </span>
+                  <span className="font-mono">
+                    {pb.winRate.toFixed(0)}% win rate
+                  </span>
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
                   <div

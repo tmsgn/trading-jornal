@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
 import {
+  BookOpen,
+  Camera,
   ChevronLeft,
   ChevronRight,
-  Settings,
-  Camera,
+  Eye,
+  EyeOff,
   Info,
-  BookOpen,
+  Settings,
 } from "lucide-react";
-import { Trade } from "@/lib/data";
+import { useMemo, useState } from "react";
+import type { Trade } from "@/lib/data";
 
 interface TradeCalendarProps {
   trades: Trade[];
@@ -19,12 +21,23 @@ interface TradeCalendarProps {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function formatPnl(val: number): string {
+function formatPnl(val: number, isPrivate: boolean): string {
+  if (isPrivate) return "***";
   const abs = Math.abs(val);
   const sign = val < 0 ? "-" : "";
   if (abs >= 1000) {
@@ -53,21 +66,26 @@ function buildCalendar(year: number, month: number) {
   return weeks;
 }
 
-export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalendarProps) {
+export function TradeCalendar({
+  trades,
+  selectedDate,
+  onSelectDate,
+}: TradeCalendarProps) {
   const [year, setYear] = useState(() => {
     if (trades.length > 0) {
       const parts = trades[0].date.split("-");
-      return parseInt(parts[0]);
+      return parseInt(parts[0], 10);
     }
     return new Date().getFullYear();
   });
   const [month, setMonth] = useState(() => {
     if (trades.length > 0) {
       const parts = trades[0].date.split("-");
-      return parseInt(parts[1]) - 1;
+      return parseInt(parts[1], 10) - 1;
     }
     return new Date().getMonth();
   });
+  const [privacyMode, setPrivacyMode] = useState(false);
 
   // Memoize calendar grid cells build
   const weeks = useMemo(() => buildCalendar(year, month), [year, month]);
@@ -77,8 +95,8 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
     return trades.filter((trade) => {
       const parts = trade.date.split("-");
       if (parts.length === 3) {
-        const y = parseInt(parts[0]);
-        const m = parseInt(parts[1]) - 1; // 0-indexed
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1; // 0-indexed
         return y === year && m === month;
       }
       return false;
@@ -87,10 +105,13 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
 
   // Group trades by day for active month
   const calendarDayMap = useMemo(() => {
-    const map: Record<number, { pnl: number; tradesCount: number; winRate: number; hasNote: boolean }> = {};
+    const map: Record<
+      number,
+      { pnl: number; tradesCount: number; winRate: number; hasNote: boolean }
+    > = {};
     for (const trade of activeMonthTrades) {
       const parts = trade.date.split("-");
-      const day = parseInt(parts[2]);
+      const day = parseInt(parts[2], 10);
       if (!map[day]) {
         map[day] = { pnl: 0, tradesCount: 0, winRate: 0, hasNote: false };
       }
@@ -99,14 +120,17 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
       if (trade.netPnl > 0) {
         map[day].winRate += 1;
       }
-      if (trade.hasNote || (trade.screenshots && trade.screenshots.length > 0)) {
+      if (
+        trade.hasNote ||
+        (trade.screenshots && trade.screenshots.length > 0)
+      ) {
         map[day].hasNote = true;
       }
     }
 
     // Finalize win rate percentages
     for (const d of Object.keys(map)) {
-      const dayNum = parseInt(d);
+      const dayNum = parseInt(d, 10);
       const dayData = map[dayNum];
       if (dayData.tradesCount > 0) {
         dayData.winRate = (dayData.winRate / dayData.tradesCount) * 100;
@@ -168,7 +192,7 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
   };
 
   return (
-    <div className="tz-card flex flex-col bg-white" style={{ minHeight: 0 }}>
+    <div className="tz-card flex flex-col bg-[var(--tz-bg-card)]" style={{ minHeight: 0 }}>
       {/* Calendar Header Controls */}
       <div
         className="flex items-center justify-between px-4 py-3"
@@ -179,16 +203,16 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
             onClick={handlePrevMonth}
             className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
           >
-            <ChevronLeft size={15} className="text-gray-500" />
+            <ChevronLeft size={15} className="text-[var(--tz-text-muted)]" />
           </button>
-          <span className="text-sm font-bold text-gray-800 mx-1 min-w-[110px] text-center">
+          <span className="text-sm font-bold text-[var(--tz-text-primary)] mx-1 min-w-[110px] text-center">
             {MONTH_NAMES[month]} {year}
           </span>
           <button
             onClick={handleNextMonth}
             className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
           >
-            <ChevronRight size={15} className="text-gray-500" />
+            <ChevronRight size={15} className="text-[var(--tz-text-muted)]" />
           </button>
           <button
             onClick={() => {
@@ -196,31 +220,39 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
               setMonth(new Date().getMonth());
               onSelectDate(null);
             }}
-            className="ml-2 px-3 py-1 rounded-full text-[10px] font-bold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="ml-2 px-3 py-1 rounded-full text-[10px] font-bold border border-[var(--tz-border)] text-[var(--tz-text-secondary)] hover:bg-[var(--tz-hover-bg)] transition-colors"
           >
             Current month
           </button>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400 font-medium">
+          <span className="text-xs text-[var(--tz-text-muted)] font-medium">
             Monthly P&L:
           </span>
           <span
             className="text-sm font-bold"
             style={{ color: monthStats.pnl >= 0 ? "#26a69a" : "#ef5350" }}
           >
-            {formatPnl(monthStats.pnl)}
+            {formatPnl(monthStats.pnl, privacyMode)}
           </span>
-          <span className="text-xs text-gray-400 font-mono">({monthStats.days} days)</span>
-          <div className="flex items-center gap-0.5 ml-1 border-l border-gray-100 pl-2">
-            <button className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+          <span className="text-xs text-[var(--tz-text-muted)] font-mono">
+            ({monthStats.days} days)
+          </span>
+          <div className="flex items-center gap-0.5 ml-1 border-l border-[var(--tz-border-subtle)] pl-2">
+            <button
+              onClick={() => setPrivacyMode(!privacyMode)}
+              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-[var(--tz-text-muted)] hover:text-[var(--tz-text-secondary)] transition-colors"
+            >
+              {privacyMode ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
+            <button className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-[var(--tz-text-muted)] hover:text-[var(--tz-text-secondary)] transition-colors">
               <Settings size={13} />
             </button>
-            <button className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <button className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-[var(--tz-text-muted)] hover:text-[var(--tz-text-secondary)] transition-colors">
               <Camera size={13} />
             </button>
-            <button className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <button className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-[var(--tz-text-muted)] hover:text-[var(--tz-text-secondary)] transition-colors">
               <Info size={13} />
             </button>
           </div>
@@ -239,7 +271,7 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
             {DAY_HEADERS.map((d) => (
               <div
                 key={d}
-                className="text-center text-[10px] font-bold text-gray-400 py-2 uppercase tracking-wider"
+                className="text-center text-[10px] font-bold text-[var(--tz-text-muted)] py-2 uppercase tracking-wider"
               >
                 {d}
               </div>
@@ -259,20 +291,22 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
               {week.map((day, di) => {
                 const data = day ? calendarDayMap[day] : undefined;
                 const style = data ? getCellStyle(data.pnl) : null;
-                const dateKey = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : "";
+                const dateKey = day
+                  ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                  : "";
                 const isSelected = selectedDate === dateKey;
 
                 return (
                   <div
                     key={di}
                     onClick={() => day && handleDayClick(day)}
-                    className="relative p-1.5 cursor-pointer transition-all hover:bg-gray-50/50"
+                    className="relative p-1.5 cursor-pointer transition-all hover:bg-[var(--tz-hover-bg)]/50"
                     style={{
                       minHeight: "82px",
                       borderRight: di < 6 ? "1px solid #f0f4f8" : undefined,
                       background: isSelected
                         ? style
-                          ? style.bg + "cc"
+                          ? `${style.bg}cc`
                           : "#eef0ff"
                         : style
                           ? style.bg
@@ -286,14 +320,14 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
                         {/* Note indicator */}
                         {data?.hasNote && (
                           <div className="absolute top-1.5 left-2">
-                            <BookOpen size={11} className="text-gray-400" />
+                            <BookOpen size={11} className="text-[var(--tz-text-muted)]" />
                           </div>
                         )}
 
                         {/* Day number */}
                         <span
                           className="absolute top-1.5 right-2 text-[10px] font-bold font-mono"
-                          style={{ color: data ? style!.textColor : "#9ca3af" }}
+                          style={{ color: data ? style?.textColor : "#9ca3af" }}
                         >
                           {day}
                         </span>
@@ -302,13 +336,14 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
                         {data && (
                           <div
                             className="flex flex-col items-center justify-center h-full pt-3"
-                            style={{ color: style!.textColor }}
+                            style={{ color: style?.textColor }}
                           >
                             <span className="text-sm font-black tracking-tight leading-none">
-                              {formatPnl(data.pnl)}
+                              {formatPnl(data.pnl, privacyMode)}
                             </span>
                             <span className="text-[9px] font-bold mt-1 opacity-85 uppercase">
-                              {data.tradesCount} {data.tradesCount === 1 ? "trade" : "trades"}
+                              {data.tradesCount}{" "}
+                              {data.tradesCount === 1 ? "trade" : "trades"}
                             </span>
                             <span className="text-[9px] font-medium opacity-80 font-mono">
                               {data.winRate.toFixed(0)}% win
@@ -331,7 +366,7 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
         >
           <div style={{ height: "33px", borderBottom: "1px solid #f0f4f8" }} />
 
-          {weeks.map((week, wi) => {
+          {weeks.map((_week, wi) => {
             const { pnl, days } = weekStats[wi] ?? { pnl: 0, days: 0 };
             const isPositive = pnl > 0;
             const isZero = pnl === 0;
@@ -347,7 +382,7 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
                   background: "#fafbfc",
                 }}
               >
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                <span className="text-[9px] font-bold text-[var(--tz-text-muted)] uppercase tracking-wider mb-0.5">
                   Week {wi + 1}
                 </span>
                 <span
@@ -360,9 +395,9 @@ export function TradeCalendar({ trades, selectedDate, onSelectDate }: TradeCalen
                         : "#ef5350",
                   }}
                 >
-                  {formatPnl(pnl)}
+                  {formatPnl(pnl, privacyMode)}
                 </span>
-                <span className="text-[9px] text-gray-400 mt-1 font-mono">
+                <span className="text-[9px] text-[var(--tz-text-muted)] mt-1 font-mono">
                   {days} {days === 1 ? "day" : "days"}
                 </span>
               </div>

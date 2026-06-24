@@ -1,10 +1,21 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { Trade, TradingAccount } from "@/lib/data";
-import { getTradesAction, addTradeAction, updateTradeAction, deleteTradeAction } from "@/app/actions/trade";
-import { getTradingAccounts, addAccountAction, deleteAccountAction } from "@/app/actions/onboarding";
 import { useRouter } from "next/navigation";
+import type React from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import {
+  addAccountAction,
+  deleteAccountAction,
+  getTradingAccounts,
+} from "@/app/actions/onboarding";
+import {
+  addTradeAction,
+  deleteTradeAction,
+  getTradesAction,
+  updateTradeAction,
+  getProfileAction,
+} from "@/app/actions/trade";
+import type { Trade, TradingAccount, Profile } from "@/lib/data";
 
 interface TradeContextType {
   trades: Trade[];
@@ -17,6 +28,8 @@ interface TradeContextType {
   deleteTrade: (id: string | number) => Promise<void>;
   addAccount: (name: string, balance: number) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
+  profile: Profile | null;
+  setProfile: (profile: Profile | null) => void;
 }
 
 const TradeContext = createContext<TradeContextType | undefined>(undefined);
@@ -25,6 +38,7 @@ export function TradeProvider({ children }: { children: React.ReactNode }) {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -34,7 +48,7 @@ export function TradeProvider({ children }: { children: React.ReactNode }) {
       try {
         const fetchedAccounts = await getTradingAccounts();
         setAccounts(fetchedAccounts);
-        
+
         if (fetchedAccounts.length > 0) {
           // Default to the first account
           setActiveAccountId(fetchedAccounts[0].id);
@@ -42,6 +56,9 @@ export function TradeProvider({ children }: { children: React.ReactNode }) {
 
         const fetchedTrades = await getTradesAction();
         setTrades(fetchedTrades);
+
+        const fetchedProfile = await getProfileAction();
+        setProfile(fetchedProfile as Profile | null);
       } catch (error) {
         console.error("Failed to load global data", error);
       } finally {
@@ -52,15 +69,17 @@ export function TradeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Filter trades by active account
-  const activeTrades = trades.filter(t => !activeAccountId || t.accountId === activeAccountId);
+  const activeTrades = trades.filter(
+    (t) => !activeAccountId || t.accountId === activeAccountId,
+  );
 
   const addTrade = async (trade: Omit<Trade, "id">) => {
     // Inject active account ID if not provided
     const payload = {
       ...trade,
-      accountId: trade.accountId || activeAccountId || undefined
+      accountId: trade.accountId || activeAccountId || undefined,
     };
-    
+
     const newTrade = await addTradeAction(payload);
     if (newTrade) {
       setTrades((prev) => [newTrade, ...prev]);
@@ -68,10 +87,13 @@ export function TradeProvider({ children }: { children: React.ReactNode }) {
     return newTrade;
   };
 
-  const updateTrade = async (id: string | number, updatedFields: Partial<Trade>) => {
+  const updateTrade = async (
+    id: string | number,
+    updatedFields: Partial<Trade>,
+  ) => {
     await updateTradeAction(String(id), updatedFields);
     setTrades((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updatedFields } : t))
+      prev.map((t) => (t.id === id ? { ...t, ...updatedFields } : t)),
     );
   };
 
@@ -82,20 +104,20 @@ export function TradeProvider({ children }: { children: React.ReactNode }) {
 
   const addAccount = async (name: string, balance: number) => {
     const newAccount = await addAccountAction(name, balance);
-    setAccounts(prev => [...prev, newAccount]);
+    setAccounts((prev) => [...prev, newAccount]);
     setActiveAccountId(newAccount.id);
   };
 
   const deleteAccount = async (id: string) => {
     const result = await deleteAccountAction(id);
-    setAccounts(prev => prev.filter(a => a.id !== id));
-    
+    setAccounts((prev) => prev.filter((a) => a.id !== id));
+
     if (result.redirected) {
       router.push("/onboarding");
     } else if (activeAccountId === id) {
       // Find another account to switch to
-      setAccounts(prev => {
-        const remaining = prev.filter(a => a.id !== id);
+      setAccounts((prev) => {
+        const remaining = prev.filter((a) => a.id !== id);
         if (remaining.length > 0) setActiveAccountId(remaining[0].id);
         return remaining;
       });
@@ -115,6 +137,8 @@ export function TradeProvider({ children }: { children: React.ReactNode }) {
         deleteTrade,
         addAccount,
         deleteAccount,
+        profile,
+        setProfile,
       }}
     >
       {children}

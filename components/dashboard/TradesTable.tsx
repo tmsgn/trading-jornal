@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Trade } from "@/lib/data";
-import { X, Calendar, FileText, Image, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Calendar, FileText, Image, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import type { Trade } from "@/lib/data";
 
 interface TradesTableProps {
   trades: Trade[];
@@ -25,9 +25,9 @@ function formatDateFriendly(dateStr: string): string {
   if (!dateStr) return "";
   const parts = dateStr.split("-");
   if (parts.length === 3) {
-    const y = parseInt(parts[0]);
-    const m = parseInt(parts[1]) - 1;
-    const d = parseInt(parts[2]);
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
     const date = new Date(y, m, d);
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -61,7 +61,7 @@ export function TradesTable({
   }, [activeTab, openTrades, closedTrades, selectedDate]);
 
   return (
-    <div className="tz-card flex flex-col h-full bg-white relative">
+    <div className="tz-card flex flex-col h-full bg-[var(--tz-bg-card)] relative">
       {/* Active Date Filter Alert Banner */}
       {selectedDate && (
         <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 border-b border-indigo-100 text-indigo-700 text-xs font-semibold animate-fade-in">
@@ -82,18 +82,18 @@ export function TradesTable({
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-100 px-4 items-center justify-between">
+      <div className="flex border-b border-[var(--tz-border-subtle)] px-4 items-center justify-between">
         <div className="flex gap-4">
           <button
             className={`py-3 text-sm font-semibold transition-all relative ${
               activeTab === "recent"
-                ? "text-gray-900"
-                : "text-gray-400 hover:text-gray-600"
+                ? "text-[var(--tz-text-primary)]"
+                : "text-[var(--tz-text-muted)] hover:text-[var(--tz-text-secondary)]"
             }`}
             onClick={() => setActiveTab("recent")}
           >
             Recent Trades
-            <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+            <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-[var(--tz-text-muted)]">
               {closedTrades.length}
             </span>
             {activeTab === "recent" && (
@@ -103,8 +103,8 @@ export function TradesTable({
           <button
             className={`py-3 text-sm font-semibold transition-all relative ${
               activeTab === "open"
-                ? "text-gray-900"
-                : "text-gray-400 hover:text-gray-600"
+                ? "text-[var(--tz-text-primary)]"
+                : "text-[var(--tz-text-muted)] hover:text-[var(--tz-text-secondary)]"
             }`}
             onClick={() => setActiveTab("open")}
           >
@@ -123,11 +123,11 @@ export function TradesTable({
       <div className="flex-1 overflow-auto">
         {filteredTrades.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center h-full min-h-[200px]">
-            <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 mb-3 border border-gray-100">
+            <div className="w-12 h-12 rounded-full bg-[var(--tz-hover-bg)] flex items-center justify-center text-[var(--tz-text-muted)] mb-3 border border-[var(--tz-border-subtle)]">
               <Calendar size={20} />
             </div>
-            <h3 className="text-sm font-bold text-gray-700">No Trades Found</h3>
-            <p className="text-xs text-gray-400 mt-1 max-w-[240px]">
+            <h3 className="text-sm font-bold text-[var(--tz-text-secondary)]">No Trades Found</h3>
+            <p className="text-xs text-[var(--tz-text-muted)] mt-1 max-w-[240px]">
               {selectedDate
                 ? `No ${
                     activeTab === "open" ? "open" : "recent"
@@ -149,13 +149,13 @@ export function TradesTable({
           <table className="w-full text-xs">
             <thead>
               <tr style={{ borderBottom: "1px solid #f0f4f8" }}>
-                <th className="text-left px-4 py-3 text-gray-400 font-semibold tracking-wider uppercase text-[10px]">
+                <th className="text-left px-4 py-3 text-[var(--tz-text-muted)] font-semibold tracking-wider uppercase text-[10px]">
                   Trade Info
                 </th>
-                <th className="text-left px-4 py-3 text-gray-400 font-semibold tracking-wider uppercase text-[10px]">
+                <th className="text-left px-4 py-3 text-[var(--tz-text-muted)] font-semibold tracking-wider uppercase text-[10px]">
                   Details
                 </th>
-                <th className="text-right px-4 py-3 text-gray-400 font-semibold tracking-wider uppercase text-[10px]">
+                <th className="text-right px-4 py-3 text-[var(--tz-text-muted)] font-semibold tracking-wider uppercase text-[10px]">
                   Net P&L
                 </th>
               </tr>
@@ -170,14 +170,14 @@ export function TradesTable({
                   <tr
                     key={trade.id}
                     onClick={() => onSelectTrade(trade)}
-                    className="hover:bg-gray-50/70 transition-all cursor-pointer group"
+                    className="hover:bg-[var(--tz-hover-bg)]/70 transition-all cursor-pointer group"
                     style={{ borderBottom: "1px solid #f8fafc" }}
                   >
                     {/* Trade Info Column */}
                     <td className="px-4 py-3.5">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-sm text-gray-800 tracking-tight group-hover:text-[#5b4fcf] transition-colors">
+                          <span className="font-extrabold text-sm text-[var(--tz-text-primary)] tracking-tight group-hover:text-[#5b4fcf] transition-colors">
                             {trade.symbol}
                           </span>
                           <span
@@ -190,7 +190,7 @@ export function TradesTable({
                             {trade.side}
                           </span>
                         </div>
-                        <span className="text-[10px] text-gray-400 font-medium font-mono">
+                        <span className="text-[10px] text-[var(--tz-text-muted)] font-medium font-mono">
                           {formatDateShort(trade.date)} at {trade.time}
                         </span>
                       </div>
@@ -199,22 +199,23 @@ export function TradesTable({
                     {/* Details Column */}
                     <td className="px-4 py-3.5">
                       <div className="flex flex-col gap-0.5 justify-center">
-                        <span className="text-gray-600 font-semibold text-[11px]">
+                        <span className="text-[var(--tz-text-secondary)] font-semibold text-[11px]">
                           {trade.qty} shares @ ${trade.entry.toFixed(2)}
                         </span>
-                        <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                        <div className="flex items-center gap-2 text-[10px] text-[var(--tz-text-muted)]">
                           {trade.playbook && (
-                            <span className="bg-gray-100 px-1 py-0.5 rounded text-gray-500 font-medium text-[9px]">
+                            <span className="bg-gray-100 px-1 py-0.5 rounded text-[var(--tz-text-muted)] font-medium text-[9px]">
                               {trade.playbook}
                             </span>
                           )}
                           <div className="flex items-center gap-1">
                             {trade.hasNote && (
-                              <FileText size={11} className="text-gray-400" />
+                              <FileText size={11} className="text-[var(--tz-text-muted)]" />
                             )}
-                            {trade.screenshots && trade.screenshots.length > 0 && (
-                              <Image size={11} className="text-gray-400" />
-                            )}
+                            {trade.screenshots &&
+                              trade.screenshots.length > 0 && (
+                                <Image size={11} className="text-[var(--tz-text-muted)]" />
+                              )}
                           </div>
                         </div>
                       </div>
@@ -233,12 +234,14 @@ export function TradesTable({
                                 : "#ef5350",
                           }}
                         >
-                          {!isZero && (isPositive ? "+" : "-")}
-                          ${Math.abs(trade.netPnl).toFixed(2)}
+                          {!isZero && (isPositive ? "+" : "-")}$
+                          {Math.abs(trade.netPnl).toFixed(2)}
                         </span>
                         {trade.status === "Closed" && (
-                          <span className="text-[9px] text-gray-400 font-bold font-mono">
-                            {trade.rr > 0 ? `+${trade.rr.toFixed(1)}R` : `${trade.rr.toFixed(1)}R`}
+                          <span className="text-[9px] text-[var(--tz-text-muted)] font-bold font-mono">
+                            {trade.rr > 0
+                              ? `+${trade.rr.toFixed(1)}R`
+                              : `${trade.rr.toFixed(1)}R`}
                           </span>
                         )}
                       </div>
@@ -253,4 +256,3 @@ export function TradesTable({
     </div>
   );
 }
-
