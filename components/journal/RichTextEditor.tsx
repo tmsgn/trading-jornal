@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor, mergeAttributes } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import ImageResize from "tiptap-extension-resize-image";
 import Link from "@tiptap/extension-link";
@@ -245,16 +245,17 @@ export function RichTextEditor({
             style: {
               default: null,
               parseHTML: element => element.getAttribute('style'),
-              renderHTML: attributes => {
-                if (!attributes.style) {
-                  return {}
-                }
-                return {
-                  style: attributes.style
-                }
-              }
             }
-          }
+          };
+        },
+        renderHTML({ HTMLAttributes }) {
+          const styleVal = HTMLAttributes.containerStyle || HTMLAttributes.style || "";
+          return [
+            "img",
+            mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+              style: styleVal,
+            }),
+          ];
         }
       }).configure({
         allowBase64: true,

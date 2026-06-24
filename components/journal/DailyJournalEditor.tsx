@@ -7,6 +7,8 @@ import { RichTextEditor } from "./RichTextEditor";
 import type { Trade } from "@/lib/data";
 import { getDailyJournalsAction, updateDailyJournalAction, type DailyLog } from "@/app/actions/journal";
 import { getPlaybooksAction } from "@/app/actions/playbooks";
+import { TradeJournalPanel } from "./TradeJournalPanel";
+import { useTrades } from "@/components/providers/TradeProvider";
 
 interface DailyJournalEditorProps {
   date: string; // YYYY-MM-DD
@@ -25,6 +27,8 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
     rating: 0,
   });
   
+  const { updateTrade } = useTrades();
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -95,6 +99,16 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
   const handleScoreChange = (field: keyof DailyLog, value: number) => {
     setJournal((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
+  };
+
+  const handleSaveTrade = async (updatedTrade: Trade) => {
+    try {
+      await updateTrade(updatedTrade.id, updatedTrade);
+      setSelectedTrade(updatedTrade);
+      toast.success("Trade updated successfully");
+    } catch {
+      toast.error("Failed to update trade");
+    }
   };
 
   if (isLoading) {
@@ -278,14 +292,27 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
                 <p className="text-xs text-[var(--tz-text-muted)] italic">No trades today.</p>
               ) : (
                 trades.map((t) => (
-                  <div key={t.id} className="p-3 bg-[var(--tz-bg-card)] rounded-lg border border-[var(--tz-border-subtle)] shadow-sm">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-bold text-[var(--tz-text-primary)]">{t.symbol} <span className={t.side === "Long" ? "text-emerald-500" : "text-red-500"}>{t.side}</span></span>
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTrade(selectedTrade?.id === t.id ? null : t)}
+                    className={`w-full text-left p-3 rounded-lg border transition-all shadow-sm flex flex-col gap-1.5 ${
+                      selectedTrade?.id === t.id
+                        ? "bg-[var(--tz-hover-bg)] border-[var(--tz-accent)]"
+                        : "bg-[var(--tz-bg-card)] border-[var(--tz-border-subtle)] hover:border-[var(--tz-accent)]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-[var(--tz-text-primary)]">
+                        {t.symbol}{" "}
+                        <span className={t.side === "Long" ? "text-emerald-500" : "text-red-500"}>
+                          {t.side}
+                        </span>
+                      </span>
                       <span className={`text-xs font-bold ${t.netPnl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                         {t.netPnl >= 0 ? "+" : ""}${Math.abs(t.netPnl).toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-[var(--tz-text-muted)] mb-1">
+                    <div className="flex items-center gap-2 text-[10px] text-[var(--tz-text-muted)] w-full">
                       <Clock size={10} />
                       <span>{t.time}</span>
                       {t.entryTimeFrame && (
@@ -295,11 +322,19 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
                         </>
                       )}
                     </div>
-                    <div className="flex justify-between text-[10px] text-[var(--tz-text-secondary)]">
+                    <div className="flex justify-between text-[10px] text-[var(--tz-text-secondary)] w-full">
                       <span>In: ${t.entry.toFixed(2)}</span>
                       <span>Out: {t.exit ? `$${t.exit.toFixed(2)}` : "Open"}</span>
                     </div>
-                  </div>
+                    {t.playbook && t.playbook !== "None" && (
+                      <div className="mt-1 pt-1 border-t border-[var(--tz-border-subtle)] flex items-center justify-between w-full">
+                        <span className="text-[9px] text-[var(--tz-text-muted)]">Playbook:</span>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-indigo-50 dark:bg-indigo-950/55 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30">
+                          {t.playbook}
+                        </span>
+                      </div>
+                    )}
+                  </button>
                 ))
               )}
             </div>
@@ -308,77 +343,87 @@ export function DailyJournalEditor({ date, trades, onClose }: DailyJournalEditor
 
         {/* ── Main Content Area (Text Editors) ───────────────────────────── */}
         <div className="flex-1 flex flex-col bg-[var(--tz-bg-card)]">
-          {/* Tabs */}
-          <div className="flex items-center gap-6 px-6 pt-4 border-b border-[var(--tz-border-subtle)]">
-            {[
-              { id: "pre", label: "Pre-Market" },
-              { id: "main", label: "Trade Journal" },
-              { id: "post", label: "Post-Market" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`pb-3 text-sm font-bold border-b-2 transition-all ${
-                  activeTab === tab.id
-                    ? "text-[var(--tz-accent)] border-[var(--tz-accent)]"
-                    : "text-[var(--tz-text-muted)] border-transparent hover:text-[var(--tz-text-primary)]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Editor Container */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {activeTab === "pre" && (
-              <div className="h-full flex flex-col">
-                <p className="text-xs text-[var(--tz-text-muted)] mb-4">
-                  What is your game plan for today? Any news events, key levels, or specific setups you are watching?
-                </p>
-                <div className="flex-1 min-h-[300px]">
-                  <RichTextEditor
-                    content={journal.preMarketNotes || ""}
-                    onChange={(html) => handleContentChange("preMarketNotes", html)}
-                    placeholder="Write your pre-market analysis here..."
-                    minHeight="400px"
-                  />
-                </div>
+          {selectedTrade ? (
+            <TradeJournalPanel
+              trade={selectedTrade}
+              onSave={handleSaveTrade}
+              onClose={() => setSelectedTrade(null)}
+            />
+          ) : (
+            <>
+              {/* Tabs */}
+              <div className="flex items-center gap-6 px-6 pt-4 border-b border-[var(--tz-border-subtle)]">
+                {[
+                  { id: "pre", label: "Pre-Market" },
+                  { id: "main", label: "Trade Journal" },
+                  { id: "post", label: "Post-Market" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`pb-3 text-sm font-bold border-b-2 transition-all ${
+                      activeTab === tab.id
+                        ? "text-[var(--tz-accent)] border-[var(--tz-accent)]"
+                        : "text-[var(--tz-text-muted)] border-transparent hover:text-[var(--tz-text-primary)]"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
-            )}
 
-            {activeTab === "main" && (
-              <div className="h-full flex flex-col">
-                <p className="text-xs text-[var(--tz-text-muted)] mb-4">
-                  Log your thoughts, emotions, and decisions while trading today. Paste screenshots of your charts.
-                </p>
-                <div className="flex-1 min-h-[300px]">
-                  <RichTextEditor
-                    content={journal.notes || ""}
-                    onChange={(html) => handleContentChange("notes", html)}
-                    placeholder="Start journaling your trades here..."
-                    minHeight="400px"
-                  />
-                </div>
-              </div>
-            )}
+              {/* Editor Container */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {activeTab === "pre" && (
+                  <div className="h-full flex flex-col">
+                    <p className="text-xs text-[var(--tz-text-muted)] mb-4">
+                      What is your game plan for today? Any news events, key levels, or specific setups you are watching?
+                    </p>
+                    <div className="flex-1 min-h-[300px]">
+                      <RichTextEditor
+                        content={journal.preMarketNotes || ""}
+                        onChange={(html) => handleContentChange("preMarketNotes", html)}
+                        placeholder="Write your pre-market analysis here..."
+                        minHeight="400px"
+                      />
+                    </div>
+                  </div>
+                )}
 
-            {activeTab === "post" && (
-              <div className="h-full flex flex-col">
-                <p className="text-xs text-[var(--tz-text-muted)] mb-4">
-                  Reflect on the day. Did you follow your rules? What did you do well? What can you improve?
-                </p>
-                <div className="flex-1 min-h-[300px]">
-                  <RichTextEditor
-                    content={journal.postMarketNotes || ""}
-                    onChange={(html) => handleContentChange("postMarketNotes", html)}
-                    placeholder="Write your post-market reflection here..."
-                    minHeight="400px"
-                  />
-                </div>
+                {activeTab === "main" && (
+                  <div className="h-full flex flex-col">
+                    <p className="text-xs text-[var(--tz-text-muted)] mb-4">
+                      Log your thoughts, emotions, and decisions while trading today. Paste screenshots of your charts.
+                    </p>
+                    <div className="flex-1 min-h-[300px]">
+                      <RichTextEditor
+                        content={journal.notes || ""}
+                        onChange={(html) => handleContentChange("notes", html)}
+                        placeholder="Start journaling your trades here..."
+                        minHeight="400px"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "post" && (
+                  <div className="h-full flex flex-col">
+                    <p className="text-xs text-[var(--tz-text-muted)] mb-4">
+                      Reflect on the day. Did you follow your rules? What did you do well? What can you improve?
+                    </p>
+                    <div className="flex-1 min-h-[300px]">
+                      <RichTextEditor
+                        content={journal.postMarketNotes || ""}
+                        onChange={(html) => handleContentChange("postMarketNotes", html)}
+                        placeholder="Write your post-market reflection here..."
+                        minHeight="400px"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>
