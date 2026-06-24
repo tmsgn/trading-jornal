@@ -37,6 +37,11 @@ export async function getTradingAccounts() {
     name: row.name,
     startingBalance: Number(row.starting_balance),
     currentBalance: Number(row.current_balance),
+    mt5Login: row.mt5_login,
+    mt5Server: row.mt5_server,
+    mt5Password: row.mt5_password,
+    mt5AccountId: row.mt5_account_id,
+    mt5ConnectionStatus: row.mt5_connection_status || "disconnected",
   }));
 }
 

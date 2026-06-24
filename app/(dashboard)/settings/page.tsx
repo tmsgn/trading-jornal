@@ -29,6 +29,7 @@ import {
 } from "@/app/actions/settings";
 import { getProfileAction, updateProfileAction } from "@/app/actions/trade";
 import { useTrades } from "@/components/providers/TradeProvider";
+import { connectMt5AccountAction, disconnectMt5AccountAction } from "@/app/actions/mt5";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -299,6 +300,13 @@ function TradingAccountsSection() {
   const [newAccountBalance, setNewAccountBalance] = useState("10000");
   const [isAdding, setIsAdding] = useState(false);
 
+  // MT5 Connection State
+  const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
+  const [mt5Login, setMt5Login] = useState("");
+  const [mt5Server, setMt5Server] = useState("");
+  const [mt5Password, setMt5Password] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+
   const handleAdd = async () => {
     if (!newAccountName.trim() || !newAccountBalance) {
       toast.error("Please fill in both fields.");
@@ -332,41 +340,217 @@ function TradingAccountsSection() {
     }
   };
 
+  const handleConnectMT5 = async (accountId: string) => {
+    if (!mt5Login.trim() || !mt5Server.trim() || !mt5Password.trim()) {
+      toast.error("Please fill in all MT5 connection fields.");
+      return;
+    }
+    setIsConnecting(true);
+    try {
+      const res = await connectMt5AccountAction(accountId, {
+        login: mt5Login,
+        server: mt5Server,
+        investorPassword: mt5Password,
+      });
+
+      if (res.success) {
+        toast.success(`MT5 connection started: status is ${res.status}`);
+        setExpandedAccountId(null);
+        setMt5Login("");
+        setMt5Server("");
+        setMt5Password("");
+        // Reload page to refresh state from context
+        window.location.reload();
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to connect to MT5 cloud");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnectMT5 = async (accountId: string, name: string) => {
+    if (confirm(`Are you sure you want to disconnect MT5 Auto-Sync for account "${name}"?`)) {
+      try {
+        await disconnectMt5AccountAction(accountId);
+        toast.success(`MT5 disconnected for "${name}".`);
+        window.location.reload();
+      } catch (e: any) {
+        toast.error(e.message || "Failed to disconnect MT5");
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        {accounts.map((account) => (
-          <div
-            key={account.id}
-            className="flex items-center justify-between px-4 py-3.5 rounded-xl border border-[var(--tz-border-subtle)] dark:border-[#2a2b35] bg-[var(--tz-bg-card)] dark:bg-[#1a1b23] shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-                }}
-              >
-                {account.name.substring(0, 2).toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-[var(--tz-text-primary)] dark:text-gray-100">
-                  {account.name}
-                </p>
-                <p className="text-xs font-semibold text-[var(--tz-text-muted)] dark:text-[var(--tz-text-muted)] mt-0.5">
-                  Starting Balance: ${account.startingBalance.toLocaleString()}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => handleDelete(account.id, account.name)}
-              className="text-xs font-bold text-red-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
+      <div className="space-y-4">
+        {accounts.map((account) => {
+          const isSyncing = account.mt5ConnectionStatus === "connected" || account.mt5ConnectionStatus === "connecting";
+          const status = account.mt5ConnectionStatus || "disconnected";
+          
+          return (
+            <div
+              key={account.id}
+              className="rounded-xl border border-[var(--tz-border-subtle)] dark:border-[#2a2b35] bg-[var(--tz-bg-card)] dark:bg-[#1a1b23] shadow-sm overflow-hidden"
             >
-              Delete Account
-            </button>
-          </div>
-        ))}
+              {/* Account Title Strip */}
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--tz-border-subtle)] dark:border-[#2a2b35] bg-[var(--tz-hover-bg)]/20">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                    style={{
+                      background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
+                    }}
+                  >
+                    {account.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[var(--tz-text-primary)] dark:text-gray-100">
+                      {account.name}
+                    </p>
+                    <p className="text-xs font-semibold text-[var(--tz-text-muted)] dark:text-[var(--tz-text-muted)] mt-0.5">
+                      Starting Balance: ${account.startingBalance.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => handleDelete(account.id, account.name)}
+                  className="text-[11px] font-bold text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
+                >
+                  Delete Account
+                </button>
+              </div>
+
+              {/* MT5 Status Strip */}
+              <div className="px-4 py-3 bg-[var(--tz-bg-card)] dark:bg-[#1a1b23] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[var(--tz-text-secondary)] dark:text-gray-300">
+                    MT5 Auto-Sync:
+                  </span>
+                  
+                  {status === "connected" && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Connected (Login: {account.mt5Login})
+                    </span>
+                  )}
+                  {status === "connecting" && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                      Connecting...
+                    </span>
+                  )}
+                  {status === "error" && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                      Connection Error
+                    </span>
+                  )}
+                  {status === "disconnected" && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200/50 dark:border-white/10">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                      Not Connected
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isSyncing ? (
+                    <button
+                      onClick={() => handleDisconnectMT5(account.id, account.name)}
+                      className="px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-500/20 text-[11px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all cursor-pointer"
+                    >
+                      Disconnect Sync
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setExpandedAccountId(expandedAccountId === account.id ? null : account.id);
+                        setMt5Login(account.mt5Login || "");
+                        setMt5Server(account.mt5Server || "");
+                        setMt5Password("");
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--tz-border)] dark:border-white/10 text-[11px] font-bold text-[var(--tz-text-primary)] dark:text-gray-200 hover:bg-[var(--tz-hover-bg)] transition-all cursor-pointer"
+                    >
+                      {expandedAccountId === account.id ? "Close Panel" : status === "error" ? "Reconnect MT5" : "Connect MT5"}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Expanded MT5 Connection Panel */}
+              {expandedAccountId === account.id && (
+                <div className="px-4 py-4 border-t border-[var(--tz-border-subtle)] dark:border-[#2a2b35] bg-[var(--tz-hover-bg)]/10 space-y-4">
+                  <div className="bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 p-3 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+                    <span className="font-bold">Security Notice:</span> We recommend using your broker's <strong>Investor Password</strong> (Read-Only) for safety. Next.js connects directly to MT5 cloud servers to stream closed trades automatically.
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* MT5 Login */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] text-[var(--tz-text-muted)] dark:text-[var(--tz-text-muted)] font-bold uppercase tracking-wider">
+                        MT5 Login ID
+                      </Label>
+                      <Input
+                        value={mt5Login}
+                        onChange={(e) => setMt5Login(e.target.value)}
+                        placeholder="e.g. 5183921"
+                        className="text-xs font-semibold text-[var(--tz-text-primary)] dark:text-gray-100 h-9"
+                      />
+                    </div>
+
+                    {/* MT5 Server */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] text-[var(--tz-text-muted)] dark:text-[var(--tz-text-muted)] font-bold uppercase tracking-wider">
+                        Broker Server
+                      </Label>
+                      <Input
+                        value={mt5Server}
+                        onChange={(e) => setMt5Server(e.target.value)}
+                        placeholder="e.g. FTMO-Server"
+                        className="text-xs font-semibold text-[var(--tz-text-primary)] dark:text-gray-100 h-9"
+                      />
+                    </div>
+
+                    {/* Investor Password */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] text-[var(--tz-text-muted)] dark:text-[var(--tz-text-muted)] font-bold uppercase tracking-wider">
+                        Investor Password
+                      </Label>
+                      <Input
+                        type="password"
+                        value={mt5Password}
+                        onChange={(e) => setMt5Password(e.target.value)}
+                        placeholder="••••••••••••"
+                        className="text-xs font-semibold text-[var(--tz-text-primary)] dark:text-gray-100 h-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      onClick={() => handleConnectMT5(account.id)}
+                      disabled={isConnecting}
+                      className="px-4 py-2 rounded-lg text-xs font-bold text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-75"
+                      style={{
+                        background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+                      }}
+                    >
+                      {isConnecting ? "Establishing Cloud Bridge..." : "Save & Sync Account"}
+                    </button>
+                    <button
+                      onClick={() => setExpandedAccountId(null)}
+                      className="px-4 py-2 rounded-lg border border-[var(--tz-border)] dark:border-white/10 text-xs font-semibold text-[var(--tz-text-secondary)] dark:text-gray-300 hover:bg-[var(--tz-hover-bg)] transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Add New Account Form */}

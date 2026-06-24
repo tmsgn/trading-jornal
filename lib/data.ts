@@ -15,6 +15,11 @@ export interface TradingAccount {
   name: string;
   startingBalance: number;
   currentBalance: number;
+  mt5Login?: string | null;
+  mt5Server?: string | null;
+  mt5Password?: string | null;
+  mt5AccountId?: string | null;
+  mt5ConnectionStatus?: string;
 }
 
 export interface Trade {
@@ -43,6 +48,8 @@ export interface Trade {
   initialRr?: number;
   notes?: string;
   entryTimeFrame?: string; // e.g. "1m", "5m", "1s"
+  externalId?: string | null;
+  syncSource?: string;
   psychology?: {
     fomo: number; // 1-5
     discipline: number; // 1-5
