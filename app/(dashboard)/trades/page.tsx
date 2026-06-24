@@ -21,7 +21,7 @@ import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTrades } from "@/components/providers/TradeProvider";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getPlaybooksAction } from "@/app/actions/playbooks";
 import type { Trade } from "@/lib/data";
 import { calculateAverageRMultiple, calculateWinRate } from "@/lib/metrics";
@@ -58,8 +58,9 @@ function formatDateShort(dateStr: string): string {
 
 export default function TradesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   // Trades State from Context
-  const { trades, updateTrade, deleteTrade } = useTrades();
+  const { trades, updateTrade, deleteTrade, accounts, activeAccountId } = useTrades();
 
   // Filters
   const [symbol, setSymbol] = useState("");
@@ -68,17 +69,63 @@ export default function TradesPage() {
   const [playbook, setPlaybook] = useState("All");
   const [status, setStatus] = useState<StatusFilter>("All");
 
+  useEffect(() => {
+    const pbParam = searchParams.get("playbook");
+    if (pbParam) {
+      setPlaybook(pbParam);
+    }
+  }, [searchParams]);
+
   // UI state
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [hoveredRow, setHoveredRow] = useState<string | number | null>(null);
   const [playbookOptions, setPlaybookOptions] = useState<string[]>(["All"]);
+  const [playbooks, setPlaybooks] = useState<{ id: string; name: string }[]>([]);
+
+  // Edit Form States
+  const [editSymbol, setEditSymbol] = useState("");
+  const [editSide, setEditSide] = useState<"Long" | "Short">("Long");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [editEntryTimeFrame, setEditEntryTimeFrame] = useState("5m");
+  const [editQty, setEditQty] = useState(100);
+  const [editEntry, setEditEntry] = useState("0");
+  const [editExit, setEditExit] = useState("0");
+  const [editRR, setEditRR] = useState("");
+  const [editNetPnl, setEditNetPnl] = useState("");
+  const [editPlaybookId, setEditPlaybookId] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editAccountId, setEditAccountId] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync edit form states when selectedTrade changes
+  useEffect(() => {
+    if (selectedTrade) {
+      setEditSymbol(selectedTrade.symbol || "");
+      setEditSide((selectedTrade.side as "Long" | "Short") || "Long");
+      setEditDate(selectedTrade.date || "");
+      setEditTime(selectedTrade.time || "");
+      setEditEntryTimeFrame(selectedTrade.entryTimeFrame || "5m");
+      setEditQty(selectedTrade.qty || 100);
+      setEditEntry(selectedTrade.entry ? String(selectedTrade.entry) : "0");
+      setEditExit(selectedTrade.exit ? String(selectedTrade.exit) : "0");
+      setEditRR(selectedTrade.rr !== undefined && selectedTrade.rr !== null ? String(selectedTrade.rr) : "");
+      setEditNetPnl(selectedTrade.netPnl !== undefined && selectedTrade.netPnl !== null ? String(selectedTrade.netPnl) : "");
+      setEditPlaybookId(selectedTrade.playbookId || "");
+      setEditTags(selectedTrade.tags ? selectedTrade.tags.join(", ") : "");
+      setEditNotes(selectedTrade.notes || "");
+      setEditAccountId(selectedTrade.accountId || "");
+    }
+  }, [selectedTrade]);
 
   // Fetch actual playbooks from database
   useEffect(() => {
     async function loadPlaybooks() {
       try {
         const pbs = await getPlaybooksAction();
+        setPlaybooks(pbs as any);
         setPlaybookOptions(["All", ...pbs.map((pb: any) => pb.name)]);
       } catch {
         // fallback to extracting from trades
@@ -91,6 +138,63 @@ export default function TradesPage() {
 
   const handleSaveTrade = async (updatedTrade: Trade) => {
     await updateTrade(updatedTrade.id, updatedTrade);
+  };
+
+  const handleSaveTradeEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTrade) return;
+
+    if (!editSymbol || !editDate || !editTime || !editQty || !editNetPnl) {
+      toast.error("Please fill Symbol, Date, Time, Quantity, and Net P&L.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const netPnl = parseFloat(editNetPnl) || 0;
+      let parsedRr = 0;
+      if (editRR) {
+        const cleaned = editRR.replace(/r/i, "").trim();
+        parsedRr = parseFloat(cleaned) || 0;
+      }
+
+      // Find playbook name from playbooks list
+      const selectedPb = playbooks.find((p) => p.id === editPlaybookId);
+      const pbName = selectedPb ? selectedPb.name : "None";
+
+      const updatedTrade = {
+        ...selectedTrade,
+        symbol: editSymbol.toUpperCase(),
+        side: editSide,
+        date: editDate,
+        time: editTime,
+        entryTimeFrame: editEntryTimeFrame,
+        qty: editQty,
+        entry: parseFloat(editEntry) || 0,
+        exit: parseFloat(editExit) || 0,
+        rr: parsedRr,
+        netPnl: netPnl,
+        playbookId: editPlaybookId || null,
+        playbook: pbName,
+        tags: editTags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+        notes: editNotes,
+        hasNote: !!editNotes && editNotes !== "<p></p>",
+        accountId: editAccountId || undefined,
+      };
+
+      await updateTrade(selectedTrade.id, updatedTrade);
+      setPanelOpen(false);
+      setSelectedTrade(null);
+      toast.success("Trade updated successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update trade");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteTrade = async (
@@ -162,7 +266,8 @@ export default function TradesPage() {
   };
 
   const handleRowClick = (trade: Trade) => {
-    router.push(`/journal?date=${trade.date}`);
+    setSelectedTrade(trade);
+    setPanelOpen(true);
   };
 
   // ── Sorting ──────────────────────────────────────────────────────────
@@ -681,6 +786,327 @@ export default function TradesPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Trade Modal */}
+      {panelOpen && selectedTrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-[var(--tz-bg-card)] border border-[var(--tz-border)] w-full max-w-lg rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[var(--tz-border-subtle)]">
+              <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-wider">
+                Edit Trade
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setPanelOpen(false);
+                  setSelectedTrade(null);
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-white transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form
+              onSubmit={handleSaveTradeEdit}
+              className="p-6 space-y-4 overflow-y-auto flex-1 text-xs"
+            >
+              {/* Account Selector */}
+              {accounts && accounts.length > 1 && (
+                <div className="space-y-1 mb-2">
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    Trading Account
+                  </label>
+                  <select
+                    value={editAccountId || activeAccountId || ""}
+                    onChange={(e) => setEditAccountId(e.target.value)}
+                    className="w-full h-9 px-2 rounded-lg border border-gray-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white dark:bg-white/5 dark:text-white text-xs font-semibold"
+                  >
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} (${acc.startingBalance.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Symbol */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    Symbol
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. TSLA"
+                    value={editSymbol}
+                    onChange={(e) =>
+                      setEditSymbol(e.target.value.toUpperCase())
+                    }
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold"
+                  />
+                </div>
+
+                {/* Side */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Side
+                  </label>
+                  <div className="flex bg-gray-100 dark:bg-white/5 p-0.5 rounded-lg border border-gray-200/50 dark:border-white/10 h-9">
+                    <button
+                      type="button"
+                      onClick={() => setEditSide("Long")}
+                      className={`flex-1 rounded-md text-xs font-bold transition-all ${
+                        editSide === "Long"
+                          ? "bg-white dark:bg-white/10 text-emerald-700 dark:text-emerald-400 shadow-sm border border-gray-200/20 dark:border-white/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Long
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditSide("Short")}
+                      className={`flex-1 rounded-md text-xs font-bold transition-all ${
+                        editSide === "Short"
+                          ? "bg-white dark:bg-white/10 text-rose-700 dark:text-rose-400 shadow-sm border border-gray-200/20 dark:border-white/10"
+                          : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Short
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Date */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Time */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Time
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={editTime}
+                    onChange={(e) => setEditTime(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Entry Time Frame */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Entry Time Frame
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 1m, 5m, 1h"
+                    value={editEntryTimeFrame}
+                    onChange={(e) => setEditEntryTimeFrame(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold"
+                  />
+                </div>
+
+                {/* Qty */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Quantity / Lot Size
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={editQty}
+                    onChange={(e) =>
+                      setEditQty(parseInt(e.target.value, 10) || 0)
+                    }
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Entry Price */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Entry Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editEntry}
+                    onChange={(e) => setEditEntry(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                  />
+                </div>
+
+                {/* Exit Price */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Exit Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editExit}
+                    onChange={(e) => setEditExit(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* R:R */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    R:R (Risk to Reward)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 2.5 or -1R"
+                    value={editRR}
+                    onChange={(e) => setEditRR(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                  />
+                </div>
+
+                {/* Net P&L */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Net P&L ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    placeholder="e.g. 500"
+                    value={editNetPnl}
+                    onChange={(e) => setEditNetPnl(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Playbook */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Playbook
+                  </label>
+                  <select
+                    value={editPlaybookId}
+                    onChange={(e) => setEditPlaybookId(e.target.value)}
+                    className="w-full h-9 px-2 rounded-lg border border-gray-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white dark:bg-white/5 dark:text-white text-xs font-semibold"
+                  >
+                    <option value="">No Playbook</option>
+                    {playbooks.map((pb) => (
+                      <option key={pb.id} value={pb.id}>
+                        {pb.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Tags */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Tags (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. trend, breakout, morning"
+                    value={editTags}
+                    onChange={(e) => setEditTags(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Notes
+                </label>
+                <textarea
+                  placeholder="Notes about this trade..."
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  rows={3}
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-medium resize-y"
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100 dark:border-[var(--tz-border-subtle)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPanelOpen(false);
+                    setSelectedTrade(null);
+                  }}
+                  className="px-4 h-9 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPanelOpen(false);
+                    router.push(`/journal?date=${selectedTrade.date}`);
+                  }}
+                  className="px-4 h-9 rounded-lg border border-indigo-200 dark:border-indigo-500/25 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-colors"
+                >
+                  Open Journal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                  style={{
+                    background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+                    boxShadow: "0 4px 14px 0 rgba(99, 102, 241, 0.2)",
+                  }}
+                >
+                  {isSaving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </span>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

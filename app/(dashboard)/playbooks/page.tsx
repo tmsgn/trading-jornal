@@ -13,6 +13,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   createPlaybookAction,
   getPlaybooksAction,
@@ -27,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Playbook } from "@/lib/data";
+import { useTrades } from "@/components/providers/TradeProvider";
 
 const COLOR_OPTIONS = [
   "#6366f1", // indigo
@@ -67,7 +70,9 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
             fontSize: 10,
             borderRadius: 6,
             padding: "2px 8px",
-            border: "1px solid #e0e7ff",
+            border: "1px solid var(--tz-border-subtle)",
+            background: "var(--tz-bg-card)",
+            color: "var(--tz-text-primary)",
           }}
         />
       </LineChart>
@@ -86,24 +91,25 @@ function PlaybookCard({
   onEdit: (pb: Playbook) => void;
   onToggleArchive: (id: number) => void;
 }) {
+  const router = useRouter();
   const isActive = pb.active;
 
   return (
     <div
-      className="tz-card overflow-hidden cursor-pointer hover:shadow-md transition-all bg-[var(--tz-bg-card)] flex flex-col justify-between"
+      className="tz-card overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 bg-[var(--tz-bg-card)] flex flex-col justify-between border border-[var(--tz-border-subtle)]"
       style={{ borderLeft: `4px solid ${pb.color}` }}
     >
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
-        <div className="flex items-start justify-between mb-1">
+        <div className="flex items-start justify-between mb-1.5">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-gray-950">{pb.name}</h3>
+            <h3 className="text-sm font-bold text-[var(--tz-text-primary)]">{pb.name}</h3>
             <span
-              className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full"
               style={
                 isActive
-                  ? { background: "#d6f0ea", color: "#1a7a5e" }
-                  : { background: "#f3f4f6", color: "#6b7280" }
+                  ? { background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }
+                  : { background: "var(--tz-hover-bg)", color: "var(--tz-text-muted)" }
               }
             >
               {isActive ? "Active" : "Archived"}
@@ -111,34 +117,28 @@ function PlaybookCard({
           </div>
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: `${pb.color}18` }}
+            style={{ background: `${pb.color}15` }}
           >
             <BookOpen size={13} style={{ color: pb.color }} />
           </div>
         </div>
-        <p className="text-xs text-[var(--tz-text-muted)] leading-relaxed line-clamp-2 h-8">
+        <p className="text-xs text-[var(--tz-text-secondary)] leading-relaxed line-clamp-2 h-8">
           {pb.description}
         </p>
       </div>
 
       {/* Sparkline */}
-      <div
-        className="px-3"
-        style={{
-          borderTop: "1px solid #f0f4f8",
-          borderBottom: "1px solid #f0f4f8",
-        }}
-      >
+      <div className="px-3 py-1 border-t border-b border-[var(--tz-border-subtle)] bg-[var(--tz-hover-bg)]/10">
         <Sparkline data={pb.equity} color={pb.color} />
       </div>
 
       {/* Stats */}
-      <div className="px-5 py-3 grid grid-cols-4 gap-2 bg-[#fafbfc]">
+      <div className="px-5 py-3 grid grid-cols-4 gap-2 bg-[var(--tz-hover-bg)]/20 border-b border-[var(--tz-border-subtle)]">
         {[
           {
             label: "Win Rate",
             value: `${pb.winRate}%`,
-            positive: pb.winRate >= 60,
+            positive: pb.winRate >= 60 ? true : pb.winRate > 0 ? false : null,
           },
           {
             label: "Total P&L",
@@ -146,17 +146,17 @@ function PlaybookCard({
               pb.totalPnl >= 0
                 ? `+$${pb.totalPnl.toLocaleString()}`
                 : `-$${Math.abs(pb.totalPnl).toLocaleString()}`,
-            positive: pb.totalPnl >= 0,
+            positive: pb.totalPnl > 0 ? true : pb.totalPnl < 0 ? false : null,
           },
           { label: "Trades", value: String(pb.trades), positive: null },
           {
             label: "Avg R:R",
             value: `${pb.avgRR.toFixed(1)}R`,
-            positive: pb.avgRR >= 1.5,
+            positive: pb.avgRR >= 1.5 ? true : pb.avgRR > 0 ? false : null,
           },
         ].map((s) => (
           <div key={s.label} className="flex flex-col">
-            <span className="text-[10px] font-bold text-[var(--tz-text-muted)] uppercase tracking-wide">
+            <span className="text-[10px] font-semibold text-[var(--tz-text-muted)] uppercase tracking-wide">
               {s.label}
             </span>
             <span
@@ -164,10 +164,10 @@ function PlaybookCard({
               style={{
                 color:
                   s.positive === null
-                    ? "#374151"
+                    ? "var(--tz-text-primary)"
                     : s.positive
-                      ? "#1a8a72"
-                      : "#c0392b",
+                      ? "#10b981"
+                      : "#ef5350",
               }}
             >
               {s.value}
@@ -177,18 +177,24 @@ function PlaybookCard({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-slate-50">
-        <div className="flex gap-3">
+      <div className="flex items-center justify-between px-5 py-3 bg-[var(--tz-bg-card)]">
+        <div className="flex gap-4">
           <button
-            onClick={() => onEdit(pb)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--tz-text-muted)] hover:text-indigo-600 transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(pb);
+            }}
+            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--tz-text-muted)] hover:text-[var(--tz-accent)] transition-colors cursor-pointer"
           >
             <Edit2 size={12} />
             Edit
           </button>
           <button
-            onClick={() => onToggleArchive(pb.id)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--tz-text-muted)] hover:text-[var(--tz-text-secondary)] transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleArchive(pb.id);
+            }}
+            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--tz-text-muted)] hover:text-[var(--tz-text-primary)] transition-colors cursor-pointer"
           >
             {isActive ? (
               <>
@@ -202,8 +208,9 @@ function PlaybookCard({
           </button>
         </div>
         <button
-          onClick={() => {
-            toast.info(`Filtering trades list by Playbook: ${pb.name}`);
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/trades?playbook=${encodeURIComponent(pb.name)}`);
           }}
           className="flex items-center gap-1.5 text-xs font-bold transition-colors hover:opacity-80 cursor-pointer"
           style={{ color: pb.color }}
@@ -261,9 +268,9 @@ function CreatePlaybookModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden bg-[var(--tz-bg-card)]">
+      <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden bg-[var(--tz-bg-card)] border border-[var(--tz-border-subtle)]">
         {/* Modal Header */}
-        <DialogHeader className="px-6 py-4 border-b border-[var(--tz-border-subtle)] shrink-0">
+        <DialogHeader className="px-6 py-4 border-b border-[var(--tz-border-subtle)] shrink-0 bg-[var(--tz-bg-card)]">
           <div className="flex items-center gap-2">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
@@ -278,7 +285,7 @@ function CreatePlaybookModal({
         </DialogHeader>
 
         {/* Body */}
-        <div className="px-6 py-5 flex flex-col gap-4 max-h-[60vh] overflow-y-auto shrink-0">
+        <div className="px-6 py-5 flex flex-col gap-4 max-h-[60vh] overflow-y-auto shrink-0 bg-[var(--tz-bg-card)]">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-[var(--tz-text-secondary)]">
@@ -288,7 +295,7 @@ function CreatePlaybookModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Breakout, VWAP Rejection…"
-              className="h-9 px-3 rounded-lg text-xs border border-[var(--tz-border)] bg-[var(--tz-bg-card)] focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-gray-300 font-medium text-[var(--tz-text-primary)]"
+              className="h-9 px-3 rounded-lg text-xs border border-[var(--tz-border)] bg-[var(--tz-bg-card)] focus:outline-none focus:ring-1 focus:ring-[var(--tz-accent)] focus:border-[var(--tz-accent)] placeholder:text-[var(--tz-text-muted)] font-medium text-[var(--tz-text-primary)]"
             />
           </div>
 
@@ -302,7 +309,7 @@ function CreatePlaybookModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Briefly describe this strategy…"
               rows={3}
-              className="px-3 py-2 rounded-lg text-xs border border-[var(--tz-border)] bg-[var(--tz-bg-card)] focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-gray-300 resize-none font-medium text-[var(--tz-text-primary)]"
+              className="px-3 py-2 rounded-lg text-xs border border-[var(--tz-border)] bg-[var(--tz-bg-card)] focus:outline-none focus:ring-1 focus:ring-[var(--tz-accent)] focus:border-[var(--tz-accent)] placeholder:text-[var(--tz-text-muted)] resize-none font-medium text-[var(--tz-text-primary)]"
             />
           </div>
 
@@ -365,6 +372,9 @@ export default function PlaybooksPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [playbookToEdit, setPlaybookToEdit] = useState<Playbook | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Trades state from context
+  const { trades, isLoading: tradesLoading } = useTrades();
 
   // Sync state across navigations
   useEffect(() => {
@@ -449,67 +459,118 @@ export default function PlaybooksPage() {
     setShowCreate(true);
   };
 
+  // Compute stats dynamically from the actual trades list!
+  const playbooksWithStats = useMemo(() => {
+    return playbooks.map((pb) => {
+      const pbTrades = trades.filter(
+        (t) => t.playbookId === String(pb.id) || t.playbook === pb.name
+      );
+
+      // Sort trades chronologically to compute equity curve
+      const sortedPbTrades = [...pbTrades].sort((a, b) => {
+        const dateCompare = a.date.localeCompare(b.date);
+        if (dateCompare !== 0) return dateCompare;
+        return a.time.localeCompare(b.time);
+      });
+
+      let currentPnl = 0;
+      const equity = [0];
+      let winCount = 0;
+      let totalPnl = 0;
+      let totalRR = 0;
+      let closedTradesCount = 0;
+
+      for (const t of sortedPbTrades) {
+        if (t.status === "Closed") {
+          totalPnl += t.netPnl;
+          currentPnl += t.netPnl;
+          equity.push(currentPnl);
+          if (t.netPnl > 0) winCount++;
+          totalRR += t.rr || 0;
+          closedTradesCount++;
+        }
+      }
+
+      if (equity.length === 1) {
+        equity.push(0);
+      }
+
+      const winRate = closedTradesCount > 0 ? Math.round((winCount / closedTradesCount) * 100) : 0;
+      const avgRR = closedTradesCount > 0 ? totalRR / closedTradesCount : 0;
+
+      return {
+        ...pb,
+        trades: pbTrades.length,
+        winRate,
+        totalPnl,
+        avgRR,
+        equity,
+      };
+    });
+  }, [playbooks, trades]);
+
   const filtered = useMemo(() => {
-    if (activeTab === "All") return playbooks;
-    if (activeTab === "Active") return playbooks.filter((p) => p.active);
-    return playbooks.filter((p) => !p.active);
-  }, [playbooks, activeTab]);
+    if (activeTab === "All") return playbooksWithStats;
+    if (activeTab === "Active") return playbooksWithStats.filter((p) => p.active);
+    return playbooksWithStats.filter((p) => !p.active);
+  }, [playbooksWithStats, activeTab]);
 
   const stats = useMemo(() => {
-    const activePbs = playbooks.filter((p) => p.active);
+    const activePbs = playbooksWithStats.filter((p) => p.active);
+    const playbooksWithTrades = playbooksWithStats.filter((p) => p.trades > 0);
 
     // Find best performing playbook
     const best =
-      playbooks.length > 0
-        ? playbooks.reduce((prev, curr) =>
+      playbooksWithTrades.length > 0
+        ? playbooksWithTrades.reduce((prev, curr) =>
             curr.totalPnl > prev.totalPnl ? curr : prev,
           )
-        : { name: "None", totalPnl: 0 };
+        : null;
 
     // Find most used playbook
     const most =
-      playbooks.length > 0
-        ? playbooks.reduce((prev, curr) =>
+      playbooksWithTrades.length > 0
+        ? playbooksWithTrades.reduce((prev, curr) =>
             curr.trades > prev.trades ? curr : prev,
           )
-        : { name: "None", trades: 0 };
+        : null;
 
     const avgWin =
-      playbooks.length > 0
-        ? playbooks.reduce((sum, p) => sum + p.winRate, 0) / playbooks.length
+      playbooksWithTrades.length > 0
+        ? playbooksWithTrades.reduce((sum, p) => sum + p.winRate, 0) / playbooksWithTrades.length
         : 0;
 
     return [
       {
         label: "Total Playbooks",
-        value: String(playbooks.length),
+        value: String(playbooksWithStats.length),
         sub: `${activePbs.length} active`,
         icon: <BookOpen size={16} />,
         color: "#6366f1",
       },
       {
         label: "Best Performing",
-        value: best.name,
-        sub: `+$${best.totalPnl.toLocaleString()} total P&L`,
+        value: best ? best.name : "None",
+        sub: best ? `${best.totalPnl >= 0 ? "+" : ""}$${best.totalPnl.toLocaleString()} total P&L` : "No trades logged",
         icon: <TrendingUp size={16} />,
-        color: "#1a8a72",
+        color: "#10b981",
       },
       {
         label: "Most Used",
-        value: most.name,
-        sub: `${most.trades} trades recorded`,
+        value: most ? most.name : "None",
+        sub: most ? `${most.trades} trades recorded` : "No trades logged",
         icon: <BarChart2 size={16} />,
         color: "#3b82f6",
       },
       {
         label: "Avg Win Rate",
-        value: `${avgWin.toFixed(1)}%`,
-        sub: "Across all playbooks",
+        value: playbooksWithTrades.length > 0 ? `${avgWin.toFixed(1)}%` : "0.0%",
+        sub: "For active playbooks",
         icon: <TrendingUp size={16} />,
-        color: avgWin >= 60 ? "#1a8a72" : "#f59e0b",
+        color: avgWin >= 60 ? "#10b981" : "#f59e0b",
       },
     ];
-  }, [playbooks]);
+  }, [playbooksWithStats]);
 
   const tabs: Array<"All" | "Active" | "Archived"> = [
     "All",
@@ -517,7 +578,18 @@ export default function PlaybooksPage() {
     "Archived",
   ];
 
-  if (isLoading) {
+  const fadeUp = {
+    hidden: { opacity: 0, y: 15 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.4, ease: "easeOut" as const },
+    },
+  };
+
+  const pageLoading = isLoading || tradesLoading;
+
+  if (pageLoading) {
     return (
       <div className="tz-page animate-pulse space-y-6">
         <div className="flex items-center justify-between">
@@ -539,7 +611,12 @@ export default function PlaybooksPage() {
   }
 
   return (
-    <div className="tz-page">
+    <motion.div
+      className="tz-page space-y-6"
+      initial="hidden"
+      animate="visible"
+      variants={fadeUp}
+    >
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -568,17 +645,17 @@ export default function PlaybooksPage() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="tz-card p-4 flex items-start gap-3 bg-[var(--tz-bg-card)]"
+            className="tz-card p-4 flex items-start gap-3 bg-[var(--tz-bg-card)] border border-[var(--tz-border-subtle)]"
           >
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: `${s.color}18`, color: s.color }}
+              style={{ background: `${s.color}15`, color: s.color }}
             >
               {s.icon}
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-[var(--tz-text-muted)] font-medium">{s.label}</p>
-              <p className="text-sm font-bold text-[var(--tz-text-primary)] leading-tight mt-0.5 truncate">
+              <p className="text-[11px] text-[var(--tz-text-muted)] font-semibold uppercase tracking-wider">{s.label}</p>
+              <p className="text-sm font-bold text-[var(--tz-text-primary)] leading-tight mt-1 truncate">
                 {s.value}
               </p>
               <p className="text-[10px] text-[var(--tz-text-muted)] mt-0.5 font-medium">
@@ -590,25 +667,23 @@ export default function PlaybooksPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-0 border-b border-slate-200">
+      <div className="flex items-center gap-0 border-b border-[var(--tz-border-subtle)]">
         {tabs.map((tab) => {
           const count =
             tab === "All"
-              ? playbooks.length
+              ? playbooksWithStats.length
               : tab === "Active"
-                ? playbooks.filter((p) => p.active).length
-                : playbooks.filter((p) => !p.active).length;
+                ? playbooksWithStats.filter((p) => p.active).length
+                : playbooksWithStats.filter((p) => !p.active).length;
           const isActive = activeTab === tab;
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer border-b-2"
               style={{
-                borderBottom: isActive
-                  ? "2px solid #6366f1"
-                  : "2px solid transparent",
-                color: isActive ? "#4f46e5" : "#6b7280",
+                borderColor: isActive ? "var(--tz-accent)" : "transparent",
+                color: isActive ? "var(--tz-accent)" : "var(--tz-text-muted)",
                 marginBottom: "-1px",
               }}
             >
@@ -616,8 +691,8 @@ export default function PlaybooksPage() {
               <span
                 className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                 style={{
-                  background: isActive ? "#e0e7ff" : "#f3f4f6",
-                  color: isActive ? "#4f46e5" : "#9ca3af",
+                  background: isActive ? "rgba(99, 102, 241, 0.1)" : "var(--tz-hover-bg)",
+                  color: isActive ? "var(--tz-accent)" : "var(--tz-text-muted)",
                 }}
               >
                 {count}
@@ -629,11 +704,11 @@ export default function PlaybooksPage() {
 
       {/* Playbook Grid */}
       {filtered.length === 0 ? (
-        <div className="tz-card flex flex-col items-center justify-center py-16 gap-3 bg-[var(--tz-bg-card)]">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-100">
+        <div className="tz-card flex flex-col items-center justify-center py-16 gap-3 bg-[var(--tz-bg-card)] border border-[var(--tz-border-subtle)]">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[var(--tz-hover-bg)]">
             <Archive size={22} className="text-[var(--tz-text-muted)]" />
           </div>
-          <p className="text-sm font-semibold text-[var(--tz-text-muted)]">
+          <p className="text-sm font-semibold text-[var(--tz-text-primary)]">
             No {activeTab.toLowerCase()} playbooks
           </p>
           <p className="text-xs text-[var(--tz-text-muted)]">
@@ -679,6 +754,6 @@ export default function PlaybooksPage() {
         }}
         onSave={handleCreateOrEditPlaybook}
       />
-    </div>
+    </motion.div>
   );
 }
