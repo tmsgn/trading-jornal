@@ -73,40 +73,7 @@ export default function DashboardPage() {
     await updateTrade(updatedTrade.id, updatedTrade);
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-5 space-y-5 animate-pulse">
-        {/* Welcome Bar Skeleton */}
-        <div className="flex items-center gap-4">
-          <Skeleton className="w-16 h-16 rounded-2xl" />
-          <div className="space-y-2">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-        </div>
 
-        {/* Stats Row Skeleton */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-2xl" />
-          ))}
-        </div>
-
-        {/* Top Charts Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 rounded-2xl" />
-          ))}
-        </div>
-
-        {/* Bottom Content Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-          <Skeleton className="h-96 lg:col-span-2 rounded-2xl" />
-          <Skeleton className="h-96 lg:col-span-3 rounded-2xl" />
-        </div>
-      </div>
-    );
-  }
 
   /* ── Empty state: zero trades ─────────────────────────────────────────── */
   if (trades.length === 0) {

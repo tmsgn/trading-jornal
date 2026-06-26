@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import {
   addAccountAction,
   deleteAccountAction,
@@ -11,9 +11,7 @@ import {
 import {
   addTradeAction,
   deleteTradeAction,
-  getTradesAction,
   updateTradeAction,
-  getProfileAction,
 } from "@/app/actions/trade";
 import type { Trade, TradingAccount, Profile } from "@/lib/data";
 
@@ -34,39 +32,26 @@ interface TradeContextType {
 
 const TradeContext = createContext<TradeContextType | undefined>(undefined);
 
-export function TradeProvider({ children }: { children: React.ReactNode }) {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [accounts, setAccounts] = useState<TradingAccount[]>([]);
-  const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function TradeProvider({
+  children,
+  initialTrades = [],
+  initialAccounts = [],
+  initialProfile = null,
+}: {
+  children: React.ReactNode;
+  initialTrades?: Trade[];
+  initialAccounts?: TradingAccount[];
+  initialProfile?: Profile | null;
+}) {
+  const [trades, setTrades] = useState<Trade[]>(initialTrades);
+  const [accounts, setAccounts] = useState<TradingAccount[]>(initialAccounts);
+  const [activeAccountId, setActiveAccountId] = useState<string | null>(
+    initialAccounts.length > 0 ? initialAccounts[0].id : null,
+  );
+  const [profile, setProfile] = useState<Profile | null>(initialProfile);
+  // No longer loading initially since data comes from server
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-
-  // Fetch accounts and trades on mount
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const fetchedAccounts = await getTradingAccounts();
-        setAccounts(fetchedAccounts);
-
-        if (fetchedAccounts.length > 0) {
-          // Default to the first account
-          setActiveAccountId(fetchedAccounts[0].id);
-        }
-
-        const fetchedTrades = await getTradesAction();
-        setTrades(fetchedTrades);
-
-        const fetchedProfile = await getProfileAction();
-        setProfile(fetchedProfile as Profile | null);
-      } catch (error) {
-        console.error("Failed to load global data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
 
   // Filter trades by active account
   const activeTrades = trades.filter(

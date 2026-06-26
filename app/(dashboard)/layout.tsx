@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
 import { getProfileAction, getTradesAction } from "@/app/actions/trade";
+import { getTradingAccounts } from "@/app/actions/onboarding";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopBar } from "@/components/dashboard/TopBar";
 import { TradeProvider } from "@/components/providers/TradeProvider";
@@ -39,8 +40,11 @@ export default async function RootLayout({
     );
   }
 
-  const _trades = await getTradesAction();
-  const profile = await getProfileAction();
+  const [trades, profile, accounts] = await Promise.all([
+    getTradesAction(),
+    getProfileAction(),
+    getTradingAccounts(),
+  ]);
 
   return (
     <html
@@ -49,7 +53,11 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex" suppressHydrationWarning>
-        <TradeProvider>
+        <TradeProvider 
+          initialTrades={trades} 
+          initialProfile={profile as any} 
+          initialAccounts={accounts}
+        >
           <div className="flex h-screen w-full overflow-hidden bg-[var(--tz-bg-page)]">
             <div className="hidden md:flex h-full flex-shrink-0">
               <Sidebar />
