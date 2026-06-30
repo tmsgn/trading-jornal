@@ -1,47 +1,43 @@
+import Decimal from "decimal.js";
 import type { Trade } from "./data";
-
-export function safeMath(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 export function calculateWinRate(trades: Trade[]): number {
   const closed = trades.filter((t) => t.status === "Closed");
   if (closed.length === 0) return 0;
   const wins = closed.filter((t) => t.outcome === "Win" || (!t.outcome && t.netPnl > 0));
-  return safeMath((wins.length / closed.length) * 100);
+  return new Decimal(wins.length).dividedBy(closed.length).times(100).toDecimalPlaces(2).toNumber();
 }
 
 export function calculateProfitFactor(trades: Trade[]): number {
   const closed = trades.filter((t) => t.status === "Closed");
   const grossProfit = closed
     .filter((t) => t.outcome === "Win" || (!t.outcome && t.netPnl > 0))
-    .reduce((sum, t) => sum + t.netPnl, 0);
-  const grossLoss = Math.abs(
-    closed
-      .filter((t) => t.outcome === "Loss" || (!t.outcome && t.netPnl < 0))
-      .reduce((sum, t) => sum + t.netPnl, 0),
-  );
+    .reduce((sum, t) => sum.plus(t.netPnl), new Decimal(0));
+    
+  const grossLoss = closed
+    .filter((t) => t.outcome === "Loss" || (!t.outcome && t.netPnl < 0))
+    .reduce((sum, t) => sum.plus(t.netPnl), new Decimal(0)).abs();
 
-  if (grossLoss === 0) return grossProfit > 0 ? Number.MAX_SAFE_INTEGER : 0;
-  return safeMath(grossProfit / grossLoss);
+  if (grossLoss.isZero()) return grossProfit.gt(0) ? Number.MAX_SAFE_INTEGER : 0;
+  return grossProfit.dividedBy(grossLoss).toDecimalPlaces(2).toNumber();
 }
 
 export function calculateAverageRMultiple(trades: Trade[]): number {
   const closed = trades.filter((t) => t.status === "Closed");
   if (closed.length === 0) return 0;
 
-  let totalR = 0;
+  let totalR = new Decimal(0);
   let count = 0;
   for (const t of closed) {
     if (t.initialRisk && t.initialRisk > 0 && t.netPnl !== undefined) {
-      totalR += t.netPnl / t.initialRisk;
+      totalR = totalR.plus(new Decimal(t.netPnl).dividedBy(t.initialRisk));
       count++;
     } else if (t.rr !== undefined) {
-      totalR += t.rr;
+      totalR = totalR.plus(t.rr);
       count++;
     }
   }
-  return count > 0 ? safeMath(totalR / count) : 0;
+  return count > 0 ? totalR.dividedBy(count).toDecimalPlaces(2).toNumber() : 0;
 }
 
 export function calculateMaxDrawdown(trades: Trade[]): {
@@ -52,26 +48,26 @@ export function calculateMaxDrawdown(trades: Trade[]): {
     .filter((t) => t.status === "Closed")
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  let peak = 0;
-  let currentEquity = 0;
-  let maxDrawdownAmt = 0;
-  let maxDrawdownPct = 0;
+  let peak = new Decimal(0);
+  let currentEquity = new Decimal(0);
+  let maxDrawdownAmt = new Decimal(0);
+  let maxDrawdownPct = new Decimal(0);
 
   for (const t of closed) {
-    currentEquity += t.netPnl;
-    if (currentEquity > peak) {
+    currentEquity = currentEquity.plus(t.netPnl);
+    if (currentEquity.gt(peak)) {
       peak = currentEquity;
     }
-    const drawdown = peak - currentEquity;
-    if (drawdown > maxDrawdownAmt) {
+    const drawdown = peak.minus(currentEquity);
+    if (drawdown.gt(maxDrawdownAmt)) {
       maxDrawdownAmt = drawdown;
-      maxDrawdownPct = peak > 0 ? (drawdown / peak) * 100 : 0;
+      maxDrawdownPct = peak.gt(0) ? drawdown.dividedBy(peak).times(100) : new Decimal(0);
     }
   }
 
   return {
-    amount: safeMath(maxDrawdownAmt),
-    percentage: safeMath(maxDrawdownPct),
+    amount: maxDrawdownAmt.toDecimalPlaces(2).toNumber(),
+    percentage: maxDrawdownPct.toDecimalPlaces(2).toNumber(),
   };
 }
 
@@ -81,17 +77,16 @@ export function calculateExpectancy(trades: Trade[]): number {
   const wins = closed.filter((t) => t.outcome === "Win" || (!t.outcome && t.netPnl > 0));
   const losses = closed.filter((t) => t.outcome === "Loss" || (!t.outcome && t.netPnl < 0));
 
-  const winRate = wins.length / closed.length;
+  const winRate = new Decimal(wins.length).dividedBy(closed.length);
 
-  const avgWin =
-    wins.length > 0
-      ? wins.reduce((sum, t) => sum + t.netPnl, 0) / wins.length
-      : 0;
-  const avgLoss =
-    losses.length > 0
-      ? Math.abs(losses.reduce((sum, t) => sum + t.netPnl, 0) / losses.length)
-      : 0;
+  const avgWin = wins.length > 0
+      ? wins.reduce((sum, t) => sum.plus(t.netPnl), new Decimal(0)).dividedBy(wins.length)
+      : new Decimal(0);
+      
+  const avgLoss = losses.length > 0
+      ? losses.reduce((sum, t) => sum.plus(t.netPnl), new Decimal(0)).dividedBy(losses.length).abs()
+      : new Decimal(0);
 
-  const expectancy = winRate * avgWin - (1 - winRate) * avgLoss;
-  return safeMath(expectancy);
+  const expectancy = winRate.times(avgWin).minus(new Decimal(1).minus(winRate).times(avgLoss));
+  return expectancy.toDecimalPlaces(2).toNumber();
 }

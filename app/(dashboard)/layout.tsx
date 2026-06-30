@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopBar } from "@/components/dashboard/TopBar";
 import { TradeProvider } from "@/components/providers/TradeProvider";
 import { Toaster } from "@/components/ui/sonner";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { BRAND } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/server";
@@ -64,7 +65,11 @@ export default async function RootLayout({
             </div>
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
               <TopBar />
-              <div className="flex-1 overflow-y-auto">{children}</div>
+              <div className="flex-1 overflow-y-auto">
+                <ErrorBoundary>
+                  {children}
+                </ErrorBoundary>
+              </div>
             </div>
           </div>
         </TradeProvider>

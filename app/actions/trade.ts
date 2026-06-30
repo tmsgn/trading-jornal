@@ -2,6 +2,34 @@
 
 import type { Trade } from "@/lib/data";
 import { createClient } from "@/utils/supabase/server";
+import { z } from "zod";
+
+const tradeSchema = z.object({
+  date: z.string().min(1),
+  time: z.string().min(1),
+  symbol: z.string().min(1),
+  side: z.enum(["Long", "Short"]),
+  qty: z.number().positive(),
+  entry: z.number().positive(),
+  exit: z.number().nullable(),
+  netPnl: z.number(),
+  rr: z.number(),
+  duration: z.number().nonnegative(),
+  playbookId: z.string().nullable().optional(),
+  tags: z.array(z.string()),
+  hasNote: z.boolean(),
+  status: z.enum(["Open", "Closed"]),
+  accountId: z.string().optional(),
+  stopLoss: z.number().optional(),
+  takeProfit: z.number().optional(),
+  initialRr: z.number().optional(),
+  notes: z.string().optional(),
+  screenshots: z.array(z.string()).optional(),
+  entryTimeFrame: z.string().optional(),
+  outcome: z.enum(["Win", "Loss", "BE"]).nullable().optional(),
+});
+
+const updateTradeSchema = tradeSchema.partial();
 
 // Map database row to Trade interface
 function mapRowToTrade(row: any): Trade {
@@ -76,38 +104,45 @@ export async function getTradesAction(): Promise<Trade[]> {
 }
 
 export async function addTradeAction(tradeData: Omit<Trade, "id">) {
+  const parsed = tradeSchema.safeParse(tradeData);
+  if (!parsed.success) {
+    throw new Error(`Validation Error: ${parsed.error.errors.map(e => e.message).join(", ")}`);
+  }
+  
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
+  const validatedData = parsed.data;
+
   const { data, error } = await supabase
     .from("trades")
     .insert({
       user_id: user.id,
-      date: tradeData.date,
-      time: tradeData.time,
-      symbol: tradeData.symbol,
-      side: tradeData.side,
-      qty: tradeData.qty,
-      entry: tradeData.entry,
-      exit: tradeData.exit,
-      net_pnl: tradeData.netPnl,
-      rr: tradeData.rr,
-      duration: tradeData.duration,
-      playbook_id: tradeData.playbookId,
-      tags: tradeData.tags,
-      has_note: tradeData.hasNote,
-      status: tradeData.status,
-      account_id: tradeData.accountId,
-      stop_loss: tradeData.stopLoss,
-      take_profit: tradeData.takeProfit,
-      initial_rr: tradeData.initialRr,
-      notes: tradeData.notes,
-      screenshots: tradeData.screenshots,
-      entry_time_frame: tradeData.entryTimeFrame,
-      outcome: tradeData.outcome,
+      date: validatedData.date,
+      time: validatedData.time,
+      symbol: validatedData.symbol,
+      side: validatedData.side,
+      qty: validatedData.qty,
+      entry: validatedData.entry,
+      exit: validatedData.exit,
+      net_pnl: validatedData.netPnl,
+      rr: validatedData.rr,
+      duration: validatedData.duration,
+      playbook_id: validatedData.playbookId,
+      tags: validatedData.tags,
+      has_note: validatedData.hasNote,
+      status: validatedData.status,
+      account_id: validatedData.accountId,
+      stop_loss: validatedData.stopLoss,
+      take_profit: validatedData.takeProfit,
+      initial_rr: validatedData.initialRr,
+      notes: validatedData.notes,
+      screenshots: validatedData.screenshots,
+      entry_time_frame: validatedData.entryTimeFrame,
+      outcome: validatedData.outcome,
     })
     .select("*, playbooks(name)")
     .single();
@@ -124,39 +159,46 @@ export async function updateTradeAction(
   id: string | number,
   tradeData: Partial<Trade>,
 ) {
+  const parsed = updateTradeSchema.safeParse(tradeData);
+  if (!parsed.success) {
+    throw new Error(`Validation Error: ${parsed.error.errors.map(e => e.message).join(", ")}`);
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
+  
+  const validatedData = parsed.data;
 
   const updatePayload: any = {};
-  if (tradeData.date !== undefined) updatePayload.date = tradeData.date;
-  if (tradeData.time !== undefined) updatePayload.time = tradeData.time;
-  if (tradeData.symbol !== undefined) updatePayload.symbol = tradeData.symbol;
-  if (tradeData.side !== undefined) updatePayload.side = tradeData.side;
-  if (tradeData.qty !== undefined) updatePayload.qty = tradeData.qty;
-  if (tradeData.entry !== undefined) updatePayload.entry = tradeData.entry;
-  if (tradeData.exit !== undefined) updatePayload.exit = tradeData.exit;
-  if (tradeData.netPnl !== undefined) updatePayload.net_pnl = tradeData.netPnl;
-  if (tradeData.rr !== undefined) updatePayload.rr = tradeData.rr;
-  if (tradeData.duration !== undefined)
-    updatePayload.duration = tradeData.duration;
-  if (tradeData.playbookId !== undefined)
-    updatePayload.playbook_id = tradeData.playbookId;
-  if (tradeData.tags !== undefined) updatePayload.tags = tradeData.tags;
-  if (tradeData.hasNote !== undefined)
-    updatePayload.has_note = tradeData.hasNote;
-  if (tradeData.status !== undefined) updatePayload.status = tradeData.status;
-  if (tradeData.accountId !== undefined)
-    updatePayload.account_id = tradeData.accountId;
-  if (tradeData.stopLoss !== undefined) updatePayload.stop_loss = tradeData.stopLoss;
-  if (tradeData.takeProfit !== undefined) updatePayload.take_profit = tradeData.takeProfit;
-  if (tradeData.initialRr !== undefined) updatePayload.initial_rr = tradeData.initialRr;
-  if (tradeData.notes !== undefined) updatePayload.notes = tradeData.notes;
-  if (tradeData.screenshots !== undefined) updatePayload.screenshots = tradeData.screenshots;
-  if (tradeData.entryTimeFrame !== undefined) updatePayload.entry_time_frame = tradeData.entryTimeFrame;
-  if (tradeData.outcome !== undefined) updatePayload.outcome = tradeData.outcome;
+  if (validatedData.date !== undefined) updatePayload.date = validatedData.date;
+  if (validatedData.time !== undefined) updatePayload.time = validatedData.time;
+  if (validatedData.symbol !== undefined) updatePayload.symbol = validatedData.symbol;
+  if (validatedData.side !== undefined) updatePayload.side = validatedData.side;
+  if (validatedData.qty !== undefined) updatePayload.qty = validatedData.qty;
+  if (validatedData.entry !== undefined) updatePayload.entry = validatedData.entry;
+  if (validatedData.exit !== undefined) updatePayload.exit = validatedData.exit;
+  if (validatedData.netPnl !== undefined) updatePayload.net_pnl = validatedData.netPnl;
+  if (validatedData.rr !== undefined) updatePayload.rr = validatedData.rr;
+  if (validatedData.duration !== undefined)
+    updatePayload.duration = validatedData.duration;
+  if (validatedData.playbookId !== undefined)
+    updatePayload.playbook_id = validatedData.playbookId;
+  if (validatedData.tags !== undefined) updatePayload.tags = validatedData.tags;
+  if (validatedData.hasNote !== undefined)
+    updatePayload.has_note = validatedData.hasNote;
+  if (validatedData.status !== undefined) updatePayload.status = validatedData.status;
+  if (validatedData.accountId !== undefined)
+    updatePayload.account_id = validatedData.accountId;
+  if (validatedData.stopLoss !== undefined) updatePayload.stop_loss = validatedData.stopLoss;
+  if (validatedData.takeProfit !== undefined) updatePayload.take_profit = validatedData.takeProfit;
+  if (validatedData.initialRr !== undefined) updatePayload.initial_rr = validatedData.initialRr;
+  if (validatedData.notes !== undefined) updatePayload.notes = validatedData.notes;
+  if (validatedData.screenshots !== undefined) updatePayload.screenshots = validatedData.screenshots;
+  if (validatedData.entryTimeFrame !== undefined) updatePayload.entry_time_frame = validatedData.entryTimeFrame;
+  if (validatedData.outcome !== undefined) updatePayload.outcome = validatedData.outcome;
 
   const { data, error } = await supabase
     .from("trades")
@@ -180,33 +222,18 @@ export async function deleteTradeAction(id: string | number) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
-  // Get the trade's date to delete corresponding journal
-  const { data: trade, error: fetchError } = await supabase
-    .from("trades")
-    .select("date")
-    .eq("id", id)
-    .single();
-
-  if (fetchError || !trade) {
-    console.error("Error fetching trade for journal deletion:", fetchError);
-  } else {
-    // Delete the daily journal entry for that date and user
-    const { error: journalErr } = await supabase
-      .from("daily_journals")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("date", trade.date);
-      
-    if (journalErr) {
-      console.error("Error deleting daily journal for trade date:", journalErr);
-    }
-  }
-
-  const { error } = await supabase.from("trades").delete().eq("id", id);
+  const { data, error } = await supabase.rpc("delete_trade_atomic", {
+    p_trade_id: id,
+    p_user_id: user.id
+  });
 
   if (error) {
-    console.error("Error deleting trade:", error);
+    console.error("Error deleting trade via atomic RPC:", error);
     throw new Error(error.message);
+  }
+
+  if (data === false) {
+    throw new Error("Trade not found or unauthorized");
   }
 
   return true;

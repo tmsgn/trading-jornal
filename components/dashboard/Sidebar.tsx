@@ -73,8 +73,14 @@ export function Sidebar() {
         const text = event.target?.result as string;
         const { parseCSV } = await import("@/lib/parsers");
         const { aggregateExecutions } = await import("@/lib/aggregator");
-        const raw = parseCSV(text, "Generic");
-        const aggregated = aggregateExecutions(raw);
+        const parsed = parseCSV(text, "Generic");
+        
+        if (parsed.errors.length > 0) {
+          toast.warning(`Imported ${parsed.executions.length} executions, but found ${parsed.errors.length} errors.`);
+          console.warn("CSV Import Errors:", parsed.errors);
+        }
+        
+        const aggregated = aggregateExecutions(parsed.executions);
         for (const t of aggregated) {
           await addTrade({ ...t, id: Date.now() + Math.random() } as any);
         }

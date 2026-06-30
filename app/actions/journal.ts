@@ -1,6 +1,22 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { z } from "zod";
+
+const journalUpdateSchema = z.object({
+  mood: z.string().optional(),
+  sleep: z.number().min(0).max(24).optional(),
+  stress: z.number().min(1).max(5).optional(),
+  notes: z.string().optional(),
+  checklist: z.record(z.boolean()).optional(),
+  screenshots: z.array(z.string()).optional(),
+  preMarketNotes: z.string().optional(),
+  postMarketNotes: z.string().optional(),
+  confidence: z.number().min(1).max(5).optional(),
+  discipline: z.number().min(1).max(5).optional(),
+  rating: z.number().min(0).max(5).optional(),
+  playbook: z.string().optional(),
+});
 
 export interface DailyLog {
   id?: string;
@@ -65,26 +81,33 @@ export async function updateDailyJournalAction(
   date: string,
   payload: Partial<DailyLog>,
 ) {
+  const parsed = journalUpdateSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new Error(`Validation Error: ${parsed.error.errors.map(e => e.message).join(", ")}`);
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
+  const validatedData = parsed.data;
+
   // Map camelCase to snake_case for DB columns
   const dbPayload: Record<string, any> = {};
-  if (payload.mood !== undefined) dbPayload.mood = payload.mood;
-  if (payload.sleep !== undefined) dbPayload.sleep = payload.sleep;
-  if (payload.stress !== undefined) dbPayload.stress = payload.stress;
-  if (payload.notes !== undefined) dbPayload.notes = payload.notes;
-  if (payload.checklist !== undefined) dbPayload.checklist = payload.checklist;
-  if (payload.screenshots !== undefined) dbPayload.screenshots = payload.screenshots;
-  if (payload.preMarketNotes !== undefined) dbPayload.pre_market_notes = payload.preMarketNotes;
-  if (payload.postMarketNotes !== undefined) dbPayload.post_market_notes = payload.postMarketNotes;
-  if (payload.confidence !== undefined) dbPayload.confidence = payload.confidence;
-  if (payload.discipline !== undefined) dbPayload.discipline = payload.discipline;
-  if (payload.rating !== undefined) dbPayload.rating = payload.rating;
-  if (payload.playbook !== undefined) dbPayload.playbook = payload.playbook;
+  if (validatedData.mood !== undefined) dbPayload.mood = validatedData.mood;
+  if (validatedData.sleep !== undefined) dbPayload.sleep = validatedData.sleep;
+  if (validatedData.stress !== undefined) dbPayload.stress = validatedData.stress;
+  if (validatedData.notes !== undefined) dbPayload.notes = validatedData.notes;
+  if (validatedData.checklist !== undefined) dbPayload.checklist = validatedData.checklist;
+  if (validatedData.screenshots !== undefined) dbPayload.screenshots = validatedData.screenshots;
+  if (validatedData.preMarketNotes !== undefined) dbPayload.pre_market_notes = validatedData.preMarketNotes;
+  if (validatedData.postMarketNotes !== undefined) dbPayload.post_market_notes = validatedData.postMarketNotes;
+  if (validatedData.confidence !== undefined) dbPayload.confidence = validatedData.confidence;
+  if (validatedData.discipline !== undefined) dbPayload.discipline = validatedData.discipline;
+  if (validatedData.rating !== undefined) dbPayload.rating = validatedData.rating;
+  if (validatedData.playbook !== undefined) dbPayload.playbook = validatedData.playbook;
 
   // Upsert pattern
   const { data: existing } = await supabase
@@ -109,18 +132,18 @@ export async function updateDailyJournalAction(
       .insert({
         user_id: user.id,
         date: date,
-        mood: payload.mood ?? "",
-        sleep: payload.sleep ?? 3,
-        stress: payload.stress ?? 3,
-        notes: payload.notes ?? "",
-        checklist: payload.checklist ?? {},
-        screenshots: payload.screenshots ?? [],
-        pre_market_notes: payload.preMarketNotes ?? "",
-        post_market_notes: payload.postMarketNotes ?? "",
-        confidence: payload.confidence ?? 3,
-        discipline: payload.discipline ?? 3,
-        rating: payload.rating ?? 0,
-        playbook: payload.playbook ?? "",
+        mood: validatedData.mood ?? "",
+        sleep: validatedData.sleep ?? 3,
+        stress: validatedData.stress ?? 3,
+        notes: validatedData.notes ?? "",
+        checklist: validatedData.checklist ?? {},
+        screenshots: validatedData.screenshots ?? [],
+        pre_market_notes: validatedData.preMarketNotes ?? "",
+        post_market_notes: validatedData.postMarketNotes ?? "",
+        confidence: validatedData.confidence ?? 3,
+        discipline: validatedData.discipline ?? 3,
+        rating: validatedData.rating ?? 0,
+        playbook: validatedData.playbook ?? "",
       })
       .select()
       .single();
