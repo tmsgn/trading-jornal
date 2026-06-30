@@ -106,7 +106,7 @@ export async function getTradesAction(): Promise<Trade[]> {
 export async function addTradeAction(tradeData: Omit<Trade, "id">) {
   const parsed = tradeSchema.safeParse(tradeData);
   if (!parsed.success) {
-    throw new Error(`Validation Error: ${parsed.error.errors.map(e => e.message).join(", ")}`);
+    throw new Error(`Validation Error: ${parsed.error.issues.map(e => e.message).join(", ")}`);
   }
   
   const supabase = await createClient();
@@ -161,7 +161,7 @@ export async function updateTradeAction(
 ) {
   const parsed = updateTradeSchema.safeParse(tradeData);
   if (!parsed.success) {
-    throw new Error(`Validation Error: ${parsed.error.errors.map(e => e.message).join(", ")}`);
+    throw new Error(`Validation Error: ${parsed.error.issues.map(e => e.message).join(", ")}`);
   }
 
   const supabase = await createClient();

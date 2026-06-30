@@ -60,7 +60,7 @@ export function parseCSV(csvText: string, brokerType: string): ParseResult {
       executions.push(validatedExec);
     } catch (e: any) {
       if (e instanceof z.ZodError) {
-        errors.push({ row: i + 1, error: e.errors.map((err: any) => err.message).join(", ") });
+        errors.push({ row: i + 1, error: e.issues.map((err: any) => err.message).join(", ") });
       } else {
         errors.push({ row: i + 1, error: e.message || String(e) });
       }

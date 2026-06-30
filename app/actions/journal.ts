@@ -8,7 +8,7 @@ const journalUpdateSchema = z.object({
   sleep: z.number().min(0).max(24).optional(),
   stress: z.number().min(1).max(5).optional(),
   notes: z.string().optional(),
-  checklist: z.record(z.boolean()).optional(),
+  checklist: z.record(z.string(), z.boolean()).optional(),
   screenshots: z.array(z.string()).optional(),
   preMarketNotes: z.string().optional(),
   postMarketNotes: z.string().optional(),
@@ -83,7 +83,7 @@ export async function updateDailyJournalAction(
 ) {
   const parsed = journalUpdateSchema.safeParse(payload);
   if (!parsed.success) {
-    throw new Error(`Validation Error: ${parsed.error.errors.map(e => e.message).join(", ")}`);
+    throw new Error(`Validation Error: ${parsed.error.issues.map(e => e.message).join(", ")}`);
   }
 
   const supabase = await createClient();
